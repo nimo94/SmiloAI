@@ -1,21 +1,94 @@
-SmiloAI will detect early and visible signs of any common dental issue based on the deep learning and image analysis. The system targets the problems that could be identified with the help of a clear and full-mouth picture without X-rays. Training a convolutional neural network (CNN) on labeled dental photographs, SmiloAI gets to know which visual features to pay attention to in order to define signs of oral health problems.
+# SmiloAI Model v2-Alpha
 
-Tooth Decay (Cavities)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-SmiloAI has the capability of detecting tooth decay by examining the tooth discoloration, dark spots or tiny surface holes. The model is based on the use of texture recognition and pixel-wise color analysis to identify the healthy enamel and the decayed part. Avoiding additional enamel erosion and tooth damage through early cavity detection is one of the ways to promote healthy oral health.
+## Overview
 
-Plaque and Tartar Build-Up
+SmiloAI is an advanced AI-powered dental health detection system that utilizes deep learning and image analysis to identify early and visible signs of common dental issues. The system is designed to detect oral health problems from clear, full-mouth photographs without requiring X-rays.
 
-The AI recognizes the presence of plaque or tartar formation as either yellowish or whitish spots that usually occur around the gum line. These deposits differ in color and texture to the clean enamel. SmiloAI can help users in cleaning up better or addressing professional cleaning with the help of contrast-based feature extraction and edge analysis, which will highlight areas where the buildup of bacteria is most likely to occur.
+Built on a convolutional neural network (CNN) architecture, SmiloAI is trained on labeled dental photographs to recognize visual features associated with various oral health conditions, enabling early detection and preventive care.
 
-Many people have very little knowledge about this health issue.<|human|>Gum Inflammation (Gingivitis)
+## Key Features
 
-SmiloAI can sense gingivitis based on the color of the gum, its shape, and contour. The inflammation causes the gums to be reddish and puffy compared to usual and are occasionally a bit bleeding around the teeth. The model can determine the level of inflammation by breaking down the gum area and measuring the intensity of redness to identify the severity of the situation early before it becomes more severe gum disease.
+### 🦷 Tooth Decay Detection (Cavities)
 
-Tooth Discoloration
+SmiloAI detects tooth decay by analyzing:
+- Tooth discoloration patterns
+- Dark spots on tooth surfaces
+- Tiny surface holes and irregularities
 
-SmiloAI can analyze the shade of teeth and the balance of colors to identify the signs of discoloration due to staining, bad hygiene, or weakening of enamels. The system is used to compare the uniformity of tooth color in the mouth using brightness normalization and hue histogram analysis. Unnatural whites are indicated as a possible discoloration.
+Using advanced texture recognition and pixel-wise color analysis, the model distinguishes between healthy enamel and decayed areas, enabling early cavity detection to prevent further enamel erosion and tooth damage.
 
-Alignment Irregularities
+### 🪥 Plaque and Tartar Build-Up Detection
 
-The system is also able to detect any issues in the alignment like crowding, overlapping or spacing problems. SmiloAI analyses tooth symmetry and space with the help of the geometric feature mapping and edge detection. Such insights may assist users to learn about orthodontics issues prior to meeting a specialist.
+The AI identifies plaque and tartar formation through:
+- Recognition of yellowish or whitish deposits along the gum line
+- Color and texture differentiation from clean enamel
+- Contrast-based feature extraction and edge analysis
+
+This helps users identify areas requiring better cleaning or professional dental intervention.
+
+### 🩸 Gum Inflammation Detection (Gingivitis)
+
+SmiloAI detects gingivitis by analyzing:
+- Gum color variations
+- Changes in gum shape and contour
+- Presence of swelling or puffiness
+- Signs of bleeding around teeth
+
+The model segments gum areas and measures redness intensity to identify inflammation severity before it progresses to more serious gum disease.
+
+### 🎨 Tooth Discoloration Analysis
+
+The system analyzes tooth shade and color balance to detect:
+- Staining from dietary or lifestyle factors
+- Signs of poor hygiene
+- Enamel weakening
+
+Using brightness normalization and hue histogram analysis, SmiloAI compares tooth color uniformity across the mouth to identify abnormal discoloration patterns.
+
+### 📐 Alignment Irregularities Detection
+
+SmiloAI identifies orthodontic issues such as:
+- Tooth crowding
+- Overlapping teeth
+- Spacing problems
+
+Through geometric feature mapping and edge detection, the system analyzes tooth symmetry and spacing to provide insights that may prompt users to consult orthodontic specialists.
+
+## Technology Stack
+
+- **Deep Learning Framework**: Convolutional Neural Network (CNN)
+- **Image Processing**: Advanced computer vision techniques
+- **Analysis Methods**: 
+  - Texture recognition
+  - Pixel-wise color analysis
+  - Contrast-based feature extraction
+  - Edge detection
+  - Geometric feature mapping
+  - Brightness normalization
+  - Hue histogram analysis
+
+## Use Cases
+
+- **Early Detection**: Identify dental issues before they become severe
+- **Preventive Care**: Enable proactive oral health maintenance
+- **Pre-Screening**: Assess dental health before professional visits
+- **Educational Tool**: Help users understand their oral health status
+
+## Disclaimer
+
+⚠️ **Important**: SmiloAI is designed as a supplementary tool for oral health awareness and should not replace professional dental examinations. Always consult with qualified dental professionals for diagnosis and treatment.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Author
+
+Copyright (c) 2025 Aswindra Selvam
+
+---
+
+**Version**: 2.0-alpha  
+**Status**: Development
