@@ -20,7 +20,7 @@ else:
     except Exception:
         sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException, Depends, Header
 from fastapi.responses import JSONResponse, StreamingResponse, RedirectResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -79,7 +79,7 @@ def get_access_token_from_refresh_token(app_key, app_secret, refresh_token):
             'client_id': app_key,
             'client_secret': app_secret,
         }
-        response = requests.post(auth_url, data=auth_data)
+        response = requests.post(auth_url, data=auth_data, timeout=10)
         response.raise_for_status()
         return response.json().get('access_token')
     except Exception as e:
@@ -102,6 +102,30 @@ AUTOPILOT_OUT_DIR = os.path.join("AUTOPILOT", "AUTOPILOT_MODELS")
 os.makedirs(LOCAL_MODELS_DIR, exist_ok=True)
 os.makedirs("AUTOPILOT", exist_ok=True)
 os.makedirs(AUTOPILOT_OUT_DIR, exist_ok=True)
+
+
+# Security Helper: Safe Path Resolution to prevent Path Traversal
+def safe_model_path(filename: str, base_dir: str = LOCAL_MODELS_DIR) -> tuple[str, str]:
+    clean_name = os.path.basename(filename or "")
+    if not clean_name or clean_name in (".", "..") or clean_name.startswith("/") or clean_name.startswith("\\"):
+        raise ValueError("Invalid model filename provided.")
+    target_path = os.path.abspath(os.path.join(base_dir, clean_name))
+    abs_base = os.path.abspath(base_dir)
+    if not target_path.startswith(abs_base):
+        raise ValueError("Security violation: Path traversal detected.")
+    return target_path, clean_name
+
+
+# Security Helper: Verify Authorized / Local Interface Request for Destructive Endpoints
+def verify_authorized_request(request: Request, x_api_key: str = Header(None, alias="X-API-Key")):
+    configured_key = os.getenv("SMILOAI_SECRET_TOKEN")
+    if configured_key:
+        if x_api_key != configured_key:
+            raise HTTPException(status_code=401, detail="Unauthorized: Invalid or missing API token.")
+        return
+    client_ip = request.client.host if request.client else ""
+    if client_ip not in ("127.0.0.1", "localhost", "::1", "testclient"):
+        raise HTTPException(status_code=403, detail="Security violation: Unauthenticated destructive actions are restricted to local loopback interface.")
 
 
 # Application lifespan manager
@@ -160,7 +184,15 @@ app = FastAPI(title="SmiloAi Engine", version="5.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:5000",
+        "http://localhost:5000",
+        "null"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -334,7 +366,7 @@ trainer_process = None
 
 
 @app.post("/launch_trainer")
-async def launch_trainer():
+async def launch_trainer(_auth: None = Depends(verify_authorized_request)):
     global trainer_process
 
     # ✨ NEW: Forensic Debugger! Writes to console AND a text file!
@@ -452,7 +484,12 @@ async def get_training_counts():
 @app.get("/download_cloud_model_stream")
 async def download_cloud_model_stream(model_name: str):
     def event_stream():
-        if model_name in models:
+        try:
+            file_path, clean_name = safe_model_path(model_name)
+        except ValueError as e:
+            yield f"data: ERROR:Security violation - {str(e)}\n\n"
+            return
+        if clean_name in models:
             yield f"data: ERROR:Model already loaded.\n\n"
             return
         try:
@@ -461,11 +498,10 @@ async def download_cloud_model_stream(model_name: str):
                 yield f"data: ERROR:Authentication failed.\n\n"
                 return
             dbx = dropbox.Dropbox(access_token)
-            file_path = os.path.join(LOCAL_MODELS_DIR, model_name)
-            dbx_path = f"{DROPBOX_FOLDER_PATH.rstrip('/')}/{model_name}"
+            dbx_path = f"{DROPBOX_FOLDER_PATH.rstrip('/')}/{clean_name}"
             link_result = dbx.files_get_temporary_link(dbx_path)
             total_size = link_result.metadata.size
-            with requests.get(link_result.link, stream=True) as r:
+            with requests.get(link_result.link, stream=True, timeout=15) as r:
                 r.raise_for_status()
                 downloaded = 0
                 with open(file_path, 'wb') as f:
@@ -526,10 +562,9 @@ async def save_training_data(image: UploadFile = File(...), label: str = Form(..
 @app.post("/load_model")
 async def load_model(file: UploadFile = File(...)):
     try:
-        model_name = file.filename
+        file_path, model_name = safe_model_path(file.filename)
         if model_name in models:
             return JSONResponse({"status": "error", "message": "Model already loaded."})
-        file_path = os.path.join(LOCAL_MODELS_DIR, model_name)
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
         models[model_name] = YOLO(file_path)
@@ -541,10 +576,13 @@ async def load_model(file: UploadFile = File(...)):
 
 @app.post("/remove_model")
 async def remove_model(model_name: str = Form(...)):
-    if model_name in models:
-        del models[model_name]
-        del model_colors[model_name]
-        file_path = os.path.join(LOCAL_MODELS_DIR, model_name)
+    try:
+        file_path, clean_name = safe_model_path(model_name)
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"status": "error", "message": str(e)})
+    if clean_name in models:
+        del models[clean_name]
+        del model_colors[clean_name]
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
@@ -553,13 +591,13 @@ async def remove_model(model_name: str = Form(...)):
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-    return {"status": "success", "message": f"Cleared {model_name}."}
+    return {"status": "success", "message": f"Cleared {clean_name}."}
 
 
 # ✨ Global Engine Shutdown Endpoint ✨
 @app.post("/shutdown")
 # ✨ FastApi Bool Fix: Check for exact string "false" just in case the browser sends it wrong
-async def shutdown_server(kill_trainer: str = "false"):
+async def shutdown_server(kill_trainer: str = "false", _auth: None = Depends(verify_authorized_request)):
     def kill_process():
         global trainer_process
 
