@@ -62,6 +62,19 @@ except ImportError:
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
+# Load local .env credentials if present (ignored by version control)
+for _env_path in (os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"), os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")):
+    if os.path.exists(_env_path):
+        try:
+            with open(_env_path, "r", encoding="utf-8") as _f:
+                for _line in _f:
+                    _line = _line.strip()
+                    if _line and not _line.startswith("#") and "=" in _line:
+                        _k, _v = _line.split("=", 1)
+                        os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+        except Exception:
+            pass
+
 # Cloud and API configuration (Load from environment or fallback to safe placeholders)
 APP_KEY = os.getenv("DROPBOX_APP_KEY", "YOUR_DROPBOX_APP_KEY_HERE")
 APP_SECRET = os.getenv("DROPBOX_APP_SECRET", "YOUR_DROPBOX_APP_SECRET_HERE")
