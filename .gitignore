@@ -1,0 +1,59 @@
+# =================================================================
+# SmiloAI Engine v5.0 — Git Ignore Rules
+# =================================================================
+
+# Environment Variables & Secrets (NEVER COMMIT!)
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.secret
+
+# Virtual Environments & Dependencies
+.venv/
+venv/
+env/
+ENV/
+site-packages/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Debug Logs & Runtime Files
+*.log
+debug_*.txt
+*_debug.log
+*_error.log
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Archives & Large Binary Dumps
+*.rar
+*.zip
+*.tar.gz
+*.7z
+
+# OS & IDE System Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build & Packaging Artifacts
+build/
+dist/
+*.spec
+*.egg-info/
+
+# Temporary Auto-Pilot Training Datasets (Ignore contents, keep folders via .gitkeep)
+Sourcecodes/AUTOPILOT/Training_Data/*
+!Sourcecodes/AUTOPILOT/Training_Data/.gitkeep
+Sourcecodes/AUTOPILOT/Training_Data_Balanced/*
+!Sourcecodes/AUTOPILOT/Training_Data_Balanced/.gitkeep

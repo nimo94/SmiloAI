@@ -1,0 +1,3304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmiloAi Engine</title>
+
+    <link rel="icon" href="logo.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background: radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.4), transparent 25%),
+                        radial-gradient(circle at 85% 30%, rgba(14, 165, 233, 0.4), transparent 25%);
+            background-color: #0f172a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .glass-button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,255,255,0.1);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            height: 6px;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #0ea5e9;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.6);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .custom-scrollbar-purple::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar-purple::-webkit-scrollbar-track { background: rgba(0,0,0,0.15); border-radius: 10px; }
+        .custom-scrollbar-purple::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.5); border-radius: 10px; }
+        .custom-scrollbar-purple::-webkit-scrollbar-thumb:hover { background: rgba(168,85,247,0.8); }
+
+        .skeleton-shiny {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(14, 165, 233, 0.3) 50%, rgba(255,255,255,0.03) 75%);
+            background-size: 200% 100%;
+            animation: shine 1.5s linear infinite;
+        }
+        @keyframes shine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        #flowCanvas {
+            background-color: #0f172a;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .flow-node {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 12px;
+            padding: 12px;
+            min-width: 180px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            user-select: none;
+            z-index: 10;
+        }
+        .flow-node-header {
+            cursor: grab;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+        }
+        .flow-node-header:active { cursor: grabbing; }
+        .flow-port {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #0f172a;
+            transition: transform 0.2s;
+        }
+        .flow-port:hover { transform: scale(1.3); }
+        .flow-port.active-wiring {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+            animation: pulse-wire 1s infinite alternate;
+        }
+        @keyframes pulse-wire {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.3); }
+        }
+        .svg-wire {
+            fill: none;
+            stroke: #3b82f6;
+            stroke-width: 3;
+            transition: stroke 0.2s;
+            cursor: pointer;
+            filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.8));
+        }
+        .svg-wire:hover {
+            stroke: #ef4444;
+            stroke-width: 5;
+            filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+        }
+    </style>
+</head>
+<body class="p-8">
+
+    <div id="initialBootLoader" class="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center transition-opacity duration-1000 ease-in-out">
+        <div class="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+            <div class="w-[500px] h-[500px] bg-blue-600 rounded-full blur-[150px] animate-pulse"></div>
+        </div>
+        <img src="logo.png" alt="SmiloAi Engine Logo" class="h-40 md:h-56 object-contain mb-10 drop-shadow-[0_0_40px_rgba(59,130,246,0.6)] animate-pulse relative z-10">
+        <div class="flex flex-col items-center gap-5 relative z-10">
+            <svg class="animate-spin h-12 w-12 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+    </div>
+
+    <div id="systemOfflineOverlay" class="fixed inset-0 z-[200] bg-[#0f172a] hidden flex-col items-center justify-center transition-opacity duration-1000 opacity-0">
+        <div class="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center mb-6 border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+            <svg class="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9"></path></svg>
+        </div>
+        <h2 id="offlineTitle" class="text-3xl font-bold text-slate-400 mb-2 tracking-widest uppercase">SYSTEM OFFLINE</h2>
+        <p id="offlineText" class="text-slate-500">The SmiloAi Engine has been safely shut down. You may now close this window.</p>
+    </div>
+
+    <div class="fixed bottom-6 left-6 z-40">
+        <button id="settingsGearBtn" onclick="toggleSettings()" class="glass-button p-4 rounded-full text-gray-300 hover:text-white shadow-lg focus:outline-none transition-transform hover:rotate-90 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:rotate-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </button>
+    </div>
+
+    <div id="flowBuilderModal" class="fixed inset-0 z-[70] bg-slate-900 hidden flex-col transition-opacity">
+        <div class="h-16 border-b border-white/10 bg-slate-800/50 flex items-center justify-between px-6 shrink-0 z-20 relative">
+            <h2 class="text-xl font-bold text-blue-400 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Custom Flow Builder
+            </h2>
+            <div class="flex items-center gap-2 text-sm text-gray-400">
+                <span class="hidden lg:inline text-xs italic opacity-70 mr-4">Click specific dot (right) → click input dot (left) to wire. Double-click wire to delete.</span>
+
+                <div class="flex items-center text-sm text-gray-400 bg-black/20 p-1.5 rounded-lg border border-white/5 mr-2 relative z-[100]">
+                    <div class="relative w-40 text-left">
+                        <button id="presetDropdownBtn" onclick="togglePresetDropdown(event)" class="w-full flex items-center justify-between bg-white/5 border border-white/10 hover:border-blue-500/50 rounded-md px-3 py-1.5 text-xs font-bold text-white transition-all shadow-inner focus:outline-none">
+                            <span id="presetDropdownText" class="truncate pointer-events-none">Load Preset</span>
+                            <svg class="w-4 h-4 ml-1 text-gray-400 pointer-events-none shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="presetDropdownMenu" class="hidden absolute top-full left-0 mt-2 w-56 rounded-xl bg-slate-800/95 backdrop-blur-xl border border-white/10 shadow-2xl py-2 overflow-hidden transition-all">
+                            <div id="presetDropdownList" class="max-h-48 overflow-y-auto custom-scrollbar-purple"></div>
+                        </div>
+                    </div>
+                    <button onclick="showSavePresetModal()" class="text-emerald-400 hover:text-emerald-300 px-3 ml-2 border-l border-white/10 transition font-bold" title="Save Current Flow as Preset">Save As</button>
+                    <button onclick="deleteSelectedPreset()" class="text-gray-500 hover:text-red-400 px-2 border-l border-white/10 transition flex items-center justify-center" title="Delete Selected Preset">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+
+                <button onclick="showClearFlowWarning()" class="text-red-400 hover:text-red-300 border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 px-3 py-2 rounded-lg transition ml-2">Clear</button>
+                <button onclick="saveAndCloseFlow()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg shadow-blue-500/30">Save & Exit</button>
+                <button onclick="closeFlowBuilder()" class="text-gray-400 hover:text-white px-3 py-2">Cancel</button>
+            </div>
+        </div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <div class="w-64 border-r border-white/10 bg-slate-800/30 p-4 flex flex-col gap-4 overflow-y-auto z-20 relative">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Base Nodes</h3>
+                <button onclick="addFlowNode('start', 'START SCAN')" class="w-full py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 rounded hover:bg-emerald-500/40 transition">+ Start Node</button>
+                <button onclick="addFlowNode('end', 'END DISPLAY')" class="w-full py-2 bg-red-500/20 text-red-400 border border-red-500/50 rounded hover:bg-red-500/40 transition">+ End Node</button>
+
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mt-4">Available Specialists</h3>
+                <div id="flowSidebarModels" class="space-y-2"></div>
+            </div>
+
+            <div id="flowCanvas" class="flex-1 w-full h-full relative" onmousemove="handleCanvasMouseMove(event)" onmousedown="startCanvasPan(event)" onwheel="handleCanvasZoom(event)">
+                <div id="flowTransformLayer" class="absolute inset-0 origin-top-left" style="transform: translate(0px, 0px) scale(1);">
+                    <svg id="wireCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fullScreenSettings" class="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-3xl hidden flex-col items-center p-6 md:p-12 overflow-y-auto transition-opacity">
+        <div class="w-full max-w-6xl flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">SETTINGS</h2>
+
+            <div class="flex items-center gap-4">
+                <button onclick="showShutdownWarning()" class="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all shadow-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9"></path></svg>
+                    POWER OFF
+                </button>
+                <button onclick="toggleSettings()" class="text-gray-400 hover:text-white transition transform hover:scale-110">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
+            <div class="glass-panel p-6 flex flex-col gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4 text-cyan-300 border-b border-white/10 pb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                        Default Models
+                    </h3>
+                    <div id="cloudModelList" class="space-y-3"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-4 text-emerald-300 border-b border-white/10 pb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        From Computer
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label id="btnLoadRgb" class="glass-button flex items-center justify-center gap-2 py-3 rounded-xl cursor-pointer text-sm font-medium transition-all duration-300">
+                            <span class="btn-text">+ Load to RGB</span>
+                            <svg class="btn-spinner hidden animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <input type="file" accept=".pt,.onnx" class="hidden" onchange="uploadLocalModel(this, 'rgb')">
+                        </label>
+                        <label id="btnLoadXray" class="glass-button flex items-center justify-center gap-2 py-3 rounded-xl cursor-pointer text-sm font-medium transition-all duration-300">
+                            <span class="btn-text">+ Load to X-Ray</span>
+                            <svg class="btn-spinner hidden animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <input type="file" accept=".pt,.onnx" class="hidden" onchange="uploadLocalModel(this, 'xray')">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-6">
+                    <h3 class="text-lg font-semibold mb-3 border-b border-white/10 pb-2">Global Sensitivity</h3>
+                    <div class="flex justify-between text-sm text-gray-300 mb-2">
+                        <span>Confidence Threshold</span>
+                        <span id="confValue" class="font-mono text-cyan-400">50%</span>
+                    </div>
+                    <input type="range" id="confSlider" min="0.05" max="0.95" step="0.05" value="0.50" oninput="document.getElementById('confValue').innerText = Math.round(this.value*100) + '%'" onchange="saveSettings()">
+                </div>
+
+                <div class="mt-2 pt-6 border-t border-white/10">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-purple-400">AI Assistant</h3>
+                            <p class="text-xs text-gray-400 mt-1">Generate clinical treatment summaries</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="aiAssistantToggle" class="sr-only peer" checked onchange="saveSettings()">
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                        <div>
+                            <h3 class="text-sm font-semibold text-yellow-400">Batch AI Warning</h3>
+                            <p class="text-xs text-gray-400 mt-1">Warn before high-token batch processing</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="showBatchWarningToggle" class="sr-only peer" checked onchange="saveSettings()">
+                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 flex flex-col gap-6">
+
+                <div class="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <h3 class="font-bold text-blue-400">Pipeline Execution</h3>
+                        <div class="flex gap-4 mt-2">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="pipelineMode" value="sequential" checked class="accent-blue-500" onchange="togglePipelineUI()"> Sequential
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                                <input type="radio" name="pipelineMode" value="custom" class="accent-blue-500" onchange="togglePipelineUI()"> Custom Flow
+                            </label>
+                        </div>
+                    </div>
+                    <button id="btnOpenFlow" onclick="openFlowBuilder()" class="hidden glass-button px-4 py-2 rounded-lg text-sm text-blue-300 font-bold border-blue-500/50 hover:bg-blue-500/20">Edit Flow</button>
+                </div>
+
+                <div id="autoPilotMainContainer" class="hidden bg-purple-900/20 border border-purple-500/30 p-5 rounded-xl flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-purple-400 flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                                Auto-Pilot Router
+                            </h3>
+                            <p class="text-xs text-gray-400 mt-1">Let AI dynamically choose the best flow.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="autoPilotToggle" class="sr-only peer" onchange="toggleAutoPilot()">
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                        </label>
+                    </div>
+
+                    <div id="autoPilotControls" class="hidden flex flex-col gap-3">
+                        <input type="hidden" id="autoPilotModelSelect" value="">
+                        <div class="relative w-full text-left z-[55]">
+                            <button id="apDropdownBtn" onclick="toggleApDropdown(event)" class="w-full flex items-center justify-between bg-black/30 border border-purple-500/30 rounded-lg p-2.5 text-white text-sm focus:outline-none hover:border-purple-500 transition-all">
+                                <span id="apDropdownText" class="truncate pointer-events-none">Select a model...</span>
+                                <svg class="w-4 h-4 ml-1 text-gray-400 pointer-events-none shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div id="apDropdownMenu" class="hidden absolute bottom-full left-0 mb-2 w-full rounded-xl bg-slate-800/95 backdrop-blur-xl border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.2)] py-2 overflow-hidden transition-all">
+                                <div id="apDropdownList" class="max-h-48 overflow-y-auto custom-scrollbar-purple"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-purple-500/20">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-bold text-gray-300">Data Collection</span>
+                            <span class="text-xs text-gray-500">Show 'Add to Auto-Pilot' button on scans</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="dataCollectionToggle" class="sr-only peer" onchange="saveSettings()">
+                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+
+                    <button id="btnOpenTrainer" onclick="showTrainerWarning()" class="w-full mt-2 py-3 rounded-xl font-bold text-slate-900 bg-purple-400 hover:bg-purple-300 transition shadow-[0_0_15px_rgba(168,85,247,0.3)] text-sm flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        OPEN TRAINING APP
+                    </button>
+                </div>
+
+
+                <div id="sequentialUiPanels">
+                    <div id="rgbSection" class="p-4 bg-white/5 rounded-xl border border-white/10 transition-all duration-300 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-blue-400">RGB SCAN</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="rgbMasterToggle" class="sr-only peer" checked onchange="toggleCategoryVisuals()">
+                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                            </label>
+                        </div>
+                        <div id="rgbModelList" class="space-y-2 max-h-[200px] overflow-y-auto pr-2 text-gray-400 text-sm italic">
+                            No RGB models loaded.
+                        </div>
+                    </div>
+
+                    <div id="xraySection" class="p-4 bg-white/5 rounded-xl border border-white/10 opacity-40 grayscale transition-all duration-300">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-purple-400">X-RAY SCAN</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="xrayMasterToggle" class="sr-only peer" onchange="toggleCategoryVisuals()">
+                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                            </label>
+                        </div>
+                        <div id="xrayModelList" class="space-y-2 max-h-[200px] overflow-y-auto pr-2 text-gray-400 text-sm italic">
+                            No X-Ray models loaded.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="customFlowUiPanel" class="hidden h-full flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-xl border border-white/10 transition-all">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto flex flex-col items-center">
+        <header class="mb-10 text-center w-full">
+            <img src="logo.png" alt="SmiloAi Engine Logo" class="h-32 md:h-40 mx-auto object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-transform duration-500 hover:scale-105">
+            <p class="text-gray-400 mt-4 tracking-widest uppercase text-sm font-semibold">Advanced Dental Detection AI</p>
+        </header>
+
+        <div id="noModelsAlert" class="hidden glass-panel p-6 rounded-2xl border-yellow-500/30 w-full mb-8 text-center bg-yellow-500/10 transition-all duration-500">
+            <h3 class="text-yellow-400 font-bold text-lg mb-2">System Uncalibrated</h3>
+            <p class="text-gray-300 text-sm mb-4">No AI Specialists detected in memory. Please download from cloud or load local models to begin.</p>
+            <button onclick="toggleSettings()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-2 px-6 rounded-lg transition shadow-lg">
+                Open Settings
+            </button>
+        </div>
+
+        <div class="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            <div class="md:col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-center gap-6">
+                <div>
+                    <h2 class="text-xl font-semibold mb-3">Patient Scan</h2>
+
+                    <label class="glass-button flex items-center justify-center gap-2 w-full py-5 rounded-xl cursor-pointer text-sm font-medium text-blue-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <span>Upload Image(s)</span>
+                        <input type="file" id="imageInput" accept="image/*" multiple class="hidden" onchange="handleImageUpload(this)">
+                    </label>
+                </div>
+
+                <div class="mt-auto flex flex-col gap-3">
+                    <button id="btnInitiateSequence" onclick="runInference()" class="w-full py-5 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none">
+                        INITIATE SEQUENCE
+                    </button>
+
+                    <button id="btnExportPDF" onclick="exportClinicalReport()" class="hidden w-full py-3 rounded-xl font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 transition-all shadow-lg flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        EXPORT HTML REPORT
+                    </button>
+
+                    <button id="btnClearScan" onclick="showClearWarning()" class="hidden w-full py-3 rounded-xl font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all shadow-lg">
+                        CLEAR SCAN
+                    </button>
+
+                    <button id="btnTrainAutoPilot" onclick="saveForAutoPilot()" class="hidden w-full py-3 mt-2 rounded-xl font-bold text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition-all shadow-[0_0_15px_rgba(168,85,247,0.2)] flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        ADD TO AUTO-PILOT
+                    </button>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 glass-panel rounded-3xl p-6 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden">
+                <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <div class="w-96 h-96 bg-blue-500 rounded-full blur-[100px]"></div>
+                </div>
+
+                <div id="loadingOverlay" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-500 rounded-3xl">
+                    <svg class="animate-spin -ml-1 mr-3 h-16 w-16 text-cyan-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span id="loadingMainText" class="text-cyan-300 font-semibold tracking-widest animate-pulse">PROCESSING SCAN...</span>
+                    <span id="loadingSubText" class="text-gray-400 text-xs tracking-wider mt-2 hidden">EST TIME REMAINING: CALCULATING...</span>
+                </div>
+
+                <div id="imagePlaceholder" class="text-gray-500 text-lg z-10 font-light tracking-wide text-center">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span id="placeholderText">Awaiting Patient Data...</span>
+                </div>
+
+                <img id="mainDisplay" class="hidden max-w-full max-h-[550px] rounded-2xl shadow-2xl z-10 border border-white/10 transition-all duration-300" />
+
+                <div id="scanSummaryContainer" class="hidden w-full mt-6 p-5 glass-panel rounded-2xl border border-white/10 z-10 transition-all shadow-lg bg-slate-900/50">
+
+                    <h3 class="text-sm font-bold text-cyan-300 mb-4 border-b border-white/10 pb-2 tracking-widest uppercase flex justify-between items-center">
+                        <span>Scan Diagnostics Summary</span>
+                        <span id="scanTime" class="text-gray-400 text-xs font-mono flex items-center"></span>
+                    </h3>
+
+                    <div id="scanSummaryList" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+
+                    <div id="aiSummarySection" class="mt-6 pt-4 border-t border-white/10 hidden">
+                        <h3 class="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Recommended Treatment Plan
+                        </h3>
+
+                        <div id="aiShinyLoader" class="space-y-2.5 w-full">
+                            <div class="h-3 w-3/4 rounded skeleton-shiny"></div>
+                            <div class="h-3 w-full rounded skeleton-shiny"></div>
+                            <div class="h-3 w-5/6 rounded skeleton-shiny"></div>
+                        </div>
+
+                        <p id="aiSummaryText" class="text-sm text-gray-200 leading-relaxed hidden"></p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="batchTrainModal" class="fixed inset-0 z-[80] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-4 md:p-6 opacity-0 transition-opacity duration-300">
+        <div id="batchTrainBox" class="glass-panel p-6 md:p-8 rounded-3xl max-w-5xl w-full flex flex-col h-[90vh] border-purple-500/30 bg-purple-500/10 shadow-[0_0_40px_rgba(168,85,247,0.2)] transform scale-95 transition-transform duration-300">
+            <h3 class="text-2xl font-bold text-white mb-2 flex items-center gap-2 shrink-0">
+                <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Select Images for Auto-Pilot
+            </h3>
+            <p class="text-gray-300 mb-4 text-sm shrink-0">Select the images from this batch that perfectly match your current Custom Flow or Pipeline settings. (Duplicates are safely ignored).</p>
+
+            <div id="batchTrainStats" class="bg-black/30 border border-white/10 rounded-xl p-4 mb-4 flex justify-between items-center text-sm shrink-0">
+                <div class="flex flex-col"><span class="text-gray-400 text-xs uppercase tracking-wider">Target Flow</span><span class="font-bold text-blue-400 truncate w-32" id="batchStatCategory">...</span></div>
+                <div class="flex flex-col text-right"><span class="text-gray-400 text-xs uppercase tracking-wider">Current</span><span class="font-bold text-white text-lg" id="batchStatCurrent">0</span></div>
+                <div class="flex flex-col text-right"><span class="text-gray-400 text-xs uppercase tracking-wider">Adding</span><span class="font-bold text-emerald-400 text-lg" id="batchStatAdding">+0</span></div>
+                <div class="flex flex-col text-right"><span class="text-gray-400 text-xs uppercase tracking-wider">New Total</span><span class="font-bold text-purple-400 text-lg" id="batchStatTotal">0</span></div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-3 min-h-0 custom-scrollbar-purple rounded-xl">
+                <div id="batchTrainGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 pb-4 auto-rows-max"></div>
+            </div>
+
+            <div class="flex gap-4 justify-between items-center mt-4 pt-4 border-t border-white/10 shrink-0">
+                <button onclick="toggleAllBatchTrain(true)" class="text-xs text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider px-2 transition">Select All</button>
+                <div class="flex gap-3 w-2/3 md:w-1/2">
+                    <button onclick="closeBatchTrainModal()" class="px-4 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2 text-sm">Cancel</button>
+                    <button id="btnBatchTrainSave" onclick="confirmBatchTrain()" class="px-4 py-3 rounded-xl font-bold text-slate-900 bg-purple-400 hover:bg-purple-300 transition shadow-lg shadow-purple-500/30 w-1/2 text-sm">Save Selected</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="shutdownWarningModal" class="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="shutdownWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.3)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">System Shutdown</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to completely shut down the SmiloAi Engine? You will need to manually restart the application to use it again.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="closeShutdownWarning()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button onclick="confirmShutdown()" class="px-6 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-400 transition shadow-lg shadow-red-500/30 w-1/2">Shut Down</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="trainerShutdownModal" class="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="trainerShutdownBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-purple-500/30 bg-purple-500/10 shadow-[0_0_40px_rgba(168,85,247,0.3)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Maximize Performance</h3>
+            <p class="text-gray-300 mb-6 text-sm">To ensure the fastest training speed, the SmiloAi Engine will safely shut down to free up CPU and Memory resources. The Training App will open automatically.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="closeTrainerWarning()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button onclick="confirmTrainerLaunch()" class="px-6 py-3 rounded-xl font-bold text-slate-900 bg-purple-400 hover:bg-purple-300 transition shadow-lg shadow-purple-500/30 w-1/2">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✨ NEW: Trainer Not Found Fallback Modal -->
+    <div id="trainerNotFoundModal" class="fixed inset-0 z-[105] bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="trainerNotFoundBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.3)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Trainer Not Found</h3>
+            <p class="text-gray-300 mb-6 text-sm">The SmiloAi Engine could not locate the Auto-Pilot Training application. Please ensure <span class="text-red-400 font-mono font-bold">auto_pilot_trainer.exe</span> is located in the correct folder.</p>
+            <div class="flex justify-center">
+                <button onclick="closeTrainerNotFoundWarning()" class="w-full px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 text-sm">Back</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="accuracyWarningModal" class="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="accuracyWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-orange-500/30 bg-orange-500/10 shadow-[0_0_40px_rgba(249,115,22,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Sub-Optimal Accuracy</h3>
+            <p class="text-gray-300 mb-6" id="accuracyWarningText">This model has an accuracy of XX%. Are you sure you want to deploy it in a clinical setting?</p>
+            <div class="flex gap-4 justify-center">
+                <button id="btnCancelDownload" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button id="btnConfirmDownload" class="px-6 py-3 rounded-xl font-bold text-slate-900 bg-orange-400 hover:bg-orange-300 transition shadow-lg shadow-orange-500/30 w-1/2">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="clearWarningModal" class="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="clearWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Clear Patient Scan?</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to clear the current scan and reset the diagnostics? This action cannot be undone.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="cancelClear()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button onclick="confirmClear()" class="px-6 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-400 transition shadow-lg shadow-red-500/30 w-1/2">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="batchWarningModal" class="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="batchWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-yellow-500/30 bg-yellow-500/10 shadow-[0_0_40px_rgba(234,179,8,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Batch AI Warning</h3>
+            <p class="text-gray-300 text-sm mb-4">You are about to batch process multiple images with the <strong>Clinical LLM</strong> enabled.</p>
+            <div class="text-left bg-black/20 p-4 rounded-lg mb-4 border border-white/5">
+                <ul class="text-xs text-gray-400 space-y-2 list-disc pl-4">
+                    <li>This will consume significant API tokens/credits.</li>
+                    <li>Processing time will increase drastically.</li>
+                    <li>We highly recommend closing heavy background apps.</li>
+                </ul>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 mb-6 justify-center">
+                <input type="checkbox" id="skipBatchWarningToggle" class="accent-yellow-500 w-4 h-4">
+                Do not show this warning again
+            </label>
+
+            <div class="flex flex-col gap-3">
+                <div class="flex gap-3">
+                    <button onclick="closeBatchWarning()" class="px-4 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/3 text-sm">Back</button>
+                    <button onclick="confirmBatchWarning(false)" class="px-4 py-3 rounded-xl font-bold text-slate-900 bg-yellow-400 hover:bg-yellow-300 transition shadow-lg shadow-yellow-500/30 w-2/3 text-sm">Turn Off AI & Continue</button>
+                </div>
+                <button onclick="confirmBatchWarning(true)" class="w-full py-3 rounded-xl font-bold text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition text-sm">Continue Anyway (Keep AI On)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="clearFlowWarningModal" class="fixed inset-0 z-[80] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="clearFlowWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Clear Entire Flow?</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to delete all nodes and wires from the canvas? This action cannot be undone.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="cancelClearFlow()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button onclick="confirmClearFlow()" class="px-6 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-400 transition shadow-lg shadow-red-500/30 w-1/2">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="flowValidationWarningModal" class="fixed inset-0 z-[80] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="flowValidationWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-yellow-500/30 bg-yellow-500/10 shadow-[0_0_40px_rgba(234,179,8,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Incomplete Flow</h3>
+            <p class="text-gray-300 mb-6" id="flowValidationMsg">Your graph is missing essential nodes.</p>
+            <div class="flex justify-center">
+                <button onclick="closeFlowValidationWarning()" class="w-full px-6 py-3 rounded-xl font-bold text-slate-900 bg-yellow-400 hover:bg-yellow-300 transition shadow-lg shadow-yellow-500/30">Fix Flow</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="savePresetModal" class="fixed inset-0 z-[80] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="savePresetBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_40px_rgba(16,185,129,0.2)] transform scale-95 transition-transform duration-300">
+            <h3 class="text-2xl font-bold text-white mb-2">Save Flow Preset</h3>
+            <p class="text-gray-300 mb-4 text-sm">Enter a name for this custom wiring setup to quickly load it later.</p>
+            <input type="text" id="presetNameInput" class="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white focus:outline-none focus:border-emerald-500 mb-6" placeholder="e.g., General + Calculus Routing" autocomplete="off">
+            <div class="flex gap-4 justify-center">
+                <button onclick="closeSavePresetModal()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Cancel</button>
+                <button onclick="confirmSavePreset()" class="px-6 py-3 rounded-xl font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 transition shadow-lg shadow-emerald-500/30 w-1/2">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✨ NEW: Unnamed Flow Modal -->
+    <div id="unnamedFlowModal" class="fixed inset-0 z-[85] bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="unnamedFlowBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-blue-500/30 bg-blue-500/10 shadow-[0_0_40px_rgba(59,130,246,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Unsaved Flow Detected</h3>
+            <p class="text-gray-300 mb-6 text-sm">To train the Auto-Pilot, this custom flow must have a name. Select an existing preset to overwrite, or create a new one.</p>
+
+            <input type="hidden" id="unnamedFlowSelectValue" value="">
+            <div class="relative w-full text-left z-[90]">
+                <button id="unnamedFlowDropdownBtn" onclick="toggleUnnamedFlowDropdown(event)" class="w-full flex items-center justify-between bg-black/30 border border-white/20 rounded-lg p-3 text-white focus:outline-none hover:border-blue-500 transition-all mb-3 cursor-pointer">
+                    <span id="unnamedFlowDropdownText" class="truncate pointer-events-none text-gray-400">Select Existing Preset</span>
+                    <svg class="w-4 h-4 ml-1 text-gray-400 pointer-events-none shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="unnamedFlowDropdownMenu" class="hidden absolute top-full left-0 mt-1 w-full rounded-xl bg-slate-800/95 backdrop-blur-xl border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)] py-2 overflow-hidden transition-all">
+                    <div id="unnamedFlowDropdownList" class="max-h-40 overflow-y-auto custom-scrollbar-purple"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 my-2">
+                <div class="flex-1 h-px bg-white/10"></div>
+                <span class="text-xs text-gray-500 font-bold uppercase tracking-wider">OR</span>
+                <div class="flex-1 h-px bg-white/10"></div>
+            </div>
+
+            <input type="text" id="unnamedFlowInput" oninput="clearUnnamedFlowDropdown()" class="w-full bg-black/30 border border-white/20 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 mb-6 mt-2" placeholder="Type new preset name..." autocomplete="off">
+
+            <div class="flex gap-4 justify-center">
+                <button id="btnUnnamedFlowBack" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button id="btnUnnamedFlowContinue" class="px-6 py-3 rounded-xl font-bold text-slate-900 bg-blue-400 hover:bg-blue-300 transition shadow-lg shadow-blue-500/30 w-1/2">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deletePresetWarningModal" class="fixed inset-0 z-[90] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="deletePresetWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">Delete Preset?</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to permanently delete the preset <span id="presetToDeleteName" class="font-bold text-red-400"></span>? This action cannot be undone.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="cancelDeletePreset()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
+                <button onclick="confirmDeletePreset()" class="px-6 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-400 transition shadow-lg shadow-red-500/30 w-1/2">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application state and configuration
+        const API_URL = "http://127.0.0.1:8000";
+
+        // Context: Single Inference
+        let imageFile = null;
+        let originalImageBase64 = null;
+        let lastScanModelsInfo = [];
+
+        // Context: Batch Inference
+        let isBatchMode = false;
+        let batchFiles = [];
+        let batchResults = [];
+
+        // Context: Engine State
+        let loadedModelsMemory = [];
+        let availableCloudModels = [];
+        let loadedModelsInfo = {};
+        let activeDownloads = new Set();
+        let disabledModels = new Set();
+
+        // Context: Auto-Pilot State
+        let autoPilotModels = [];
+        let autoPilotClasses = {};
+        let currentFlowBaseCount = 0;
+
+        // Context: Node Builder State
+        let flowNodes = [];
+        let flowEdges = [];
+        let activeWiring = null;
+        let flowPanX = 0;
+        let flowPanY = 0;
+        let flowZoom = 1;
+        let isPanningCanvas = false;
+        let startPanClientX = 0;
+        let startPanClientY = 0;
+        let dragInfo = null;
+
+        let flowPresets = JSON.parse(localStorage.getItem('smiloai_flow_presets')) || {};
+        let currentSelectedPreset = "";
+
+        function log(msg) { console.log(`> ${msg}`); }
+
+        // System Lifecycle
+        function showShutdownWarning() {
+            const modal = document.getElementById('shutdownWarningModal');
+            const box = document.getElementById('shutdownWarningBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeShutdownWarning() {
+            const modal = document.getElementById('shutdownWarningModal');
+            const box = document.getElementById('shutdownWarningBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        async function confirmShutdown() {
+            closeShutdownWarning();
+
+            const offlineOverlay = document.getElementById('systemOfflineOverlay');
+            document.getElementById('offlineTitle').innerText = "SYSTEM OFFLINE";
+            document.getElementById('offlineText').innerText = "The SmiloAi Engine has been safely shut down. You may now close this window.";
+
+            offlineOverlay.classList.remove('hidden');
+            offlineOverlay.classList.add('flex');
+            setTimeout(() => {
+                offlineOverlay.classList.remove('opacity-0');
+            }, 50);
+
+            try {
+                await fetch(`${API_URL}/shutdown`, { method: "POST" });
+            } catch (e) {}
+        }
+
+        // Trainer Launch Lifecycle
+        function showTrainerWarning() {
+            const modal = document.getElementById('trainerShutdownModal');
+            const box = document.getElementById('trainerShutdownBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeTrainerWarning() {
+            const modal = document.getElementById('trainerShutdownModal');
+            const box = document.getElementById('trainerShutdownBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        async function confirmTrainerLaunch() {
+            closeTrainerWarning();
+
+            try {
+                const res = await fetch(`${API_URL}/launch_trainer`, { method: "POST" });
+                const data = await res.json();
+
+                // ✨ Fix: ONLY shut down if the backend successfully found and launched the app!
+                if (data.status === "success") {
+                    const offlineOverlay = document.getElementById('systemOfflineOverlay');
+
+                    document.getElementById('offlineTitle').innerText = "TRAINER LAUNCHED";
+                    document.getElementById('offlineTitle').classList.replace('text-slate-400', 'text-purple-400');
+                    document.getElementById('offlineText').innerText = "SmiloAi Engine has released CPU/RAM resources to maximize training speed. You may now close this window.";
+
+                    offlineOverlay.classList.remove('hidden');
+                    offlineOverlay.classList.add('flex');
+                    setTimeout(() => {
+                        offlineOverlay.classList.remove('opacity-0');
+                    }, 50);
+
+                    // Wait 5 full seconds for the OS to completely launch the new Trainer App before killing the engine
+                    setTimeout(async () => {
+                        try {
+                            await fetch(`${API_URL}/shutdown?kill_trainer=false`, { method: "POST" });
+                        } catch(e) {}
+                    }, 5000);
+                } else {
+                    // If it failed to find it, trigger our new fallback modal!
+                    setTimeout(showTrainerNotFoundWarning, 350);
+                }
+            } catch (e) {
+                console.error("Failed to sequence trainer launch", e);
+                setTimeout(showTrainerNotFoundWarning, 350);
+            }
+        }
+
+        // ✨ NEW: Modal Handlers for Trainer Not Found
+        function showTrainerNotFoundWarning() {
+            const modal = document.getElementById('trainerNotFoundModal');
+            const box = document.getElementById('trainerNotFoundBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeTrainerNotFoundWarning() {
+            const modal = document.getElementById('trainerNotFoundModal');
+            const box = document.getElementById('trainerNotFoundBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        // UI Update: Custom Flow Panel
+        function refreshCustomFlowDisplay() {
+            const panel = document.getElementById('customFlowUiPanel');
+            const apEnabled = document.getElementById('autoPilotToggle').checked;
+
+            if (apEnabled) {
+                panel.innerHTML = `
+                    <svg class="w-16 h-16 text-purple-500/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                    <p class="text-purple-300 font-bold text-lg">Auto-Pilot Smart Routing</p>
+                    <p class="text-sm text-gray-400 mt-2">The AI engine will dynamically analyze each scan and choose the best custom flow automatically.</p>
+                `;
+                panel.className = "hidden h-full flex flex-col items-center justify-center text-center p-8 bg-purple-500/5 rounded-xl border border-purple-500/20 transition-all";
+            } else {
+                let flowText = currentSelectedPreset ? `Preset: ${currentSelectedPreset}` : "Unsaved Custom Flow";
+                panel.innerHTML = `
+                    <svg class="w-16 h-16 text-blue-500/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <p class="text-blue-300 font-bold text-lg">Active Flow: <br><span class="text-white">${flowText}</span></p>
+                    <p class="text-sm text-gray-400 mt-2">The engine will strictly follow the conditional wires you placed in the Flow Builder.</p>
+                `;
+                panel.className = "hidden h-full flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-xl border border-white/10 transition-all";
+            }
+
+            const isCustom = document.querySelector('input[name="pipelineMode"]:checked').value === 'custom';
+            if (isCustom) panel.classList.remove('hidden');
+        }
+
+        // State Sync: Auto-Pilot
+        function validateApDependencies(selectedModel) {
+            if (!selectedModel) return true;
+            const modelClasses = autoPilotClasses[selectedModel] || [];
+            let missingPresets = [];
+            let missingModels = new Set();
+
+            modelClasses.forEach(cls => {
+                if (cls !== "SEQUENTIAL_RGB" && cls !== "SEQUENTIAL_XRAY" && cls !== "UNLABELED") {
+                    let found = false;
+                    for (let presetName in flowPresets) {
+                        if (presetName.replace(/[^a-zA-Z0-9]/g, '_') === cls) {
+                            found = true;
+                            flowPresets[presetName].nodes.forEach(node => {
+                                if (node.type === 'model' && !loadedModelsMemory.includes(node.modelName)) {
+                                    missingModels.add(`• ${node.modelName} (required by flow: ${presetName})`);
+                                }
+                            });
+                            break;
+                        }
+                    }
+                    if (!found) missingPresets.push(cls);
+                }
+            });
+
+            if (missingPresets.length > 0) {
+                alert(`PRESET MISMATCH DETECTED.\n\nThe selected Auto-Pilot model was trained to route to the following presets, but they are missing from your Local Storage:\n\n${missingPresets.join(', ')}\n\nPlease recreate these Custom Flows and save them with the exact matching names, or Routing will fail.`);
+                return false;
+            }
+
+            if (missingModels.size > 0) {
+                alert(`MISSING AI SPECIALISTS.\n\nThe selected Auto-Pilot model requires Custom Flows that use models not currently in memory:\n\n${Array.from(missingModels).join('\n')}\n\nPlease load these models from the cloud or your computer before enabling Auto-Pilot.`);
+                return false;
+            }
+            return true;
+        }
+
+        function toggleAutoPilot() {
+            const toggle = document.getElementById('autoPilotToggle');
+            const controls = document.getElementById('autoPilotControls');
+
+            if (toggle.checked) {
+                if (autoPilotModels.length === 0) {
+                    alert("NO AUTO-PILOT MODELS FOUND.\n\nYou must open the Training App and train a routing model before enabling Smart Routing.");
+                    toggle.checked = false;
+                    return;
+                }
+
+                // Unhide the controls so user can select a model
+                controls.classList.remove('hidden');
+
+                const selectedModel = document.getElementById('autoPilotModelSelect').value;
+                if (selectedModel) {
+                    if (!validateApDependencies(selectedModel)) {
+                        toggle.checked = false;
+                        controls.classList.add('hidden');
+                    }
+                }
+            } else {
+                controls.classList.add('hidden');
+            }
+            saveSettings();
+            refreshCustomFlowDisplay();
+        }
+
+        function updateAutoPilotDropdown() {
+            const list = document.getElementById('apDropdownList');
+            list.innerHTML = '';
+            const input = document.getElementById('autoPilotModelSelect');
+
+            if (autoPilotModels.length === 0) {
+                document.getElementById('apDropdownText').innerText = "No models available...";
+                list.innerHTML = '<div class="px-4 py-3 text-xs text-gray-500 italic text-center">No routing models trained yet.</div>';
+                return;
+            }
+
+            autoPilotModels.forEach(m => {
+                const info = parseModelInfo(m);
+                const accBadge = info.accuracy ? `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded text-[10px] font-mono tracking-widest shrink-0 shadow-inner">${info.accuracy}% ACC</span>` : '';
+
+                list.innerHTML += `
+                    <button onclick="selectApModel('${m}', '${info.displayName}')" class="w-full text-left px-4 py-3 hover:bg-purple-500/20 transition-colors border-l-2 border-transparent hover:border-purple-500 flex items-center justify-between group">
+                        <div class="flex flex-col truncate pr-2">
+                            <span class="text-sm font-bold text-gray-200 group-hover:text-white truncate transition-colors">${info.displayName}</span>
+                            <span class="text-[9px] text-gray-500 font-mono tracking-widest mt-1 truncate">${m}</span>
+                        </div>
+                        ${accBadge}
+                    </button>
+                `;
+            });
+
+            // Restore user preference
+            const savedModel = localStorage.getItem('smiloai_autopilot_model');
+            if (savedModel && autoPilotModels.includes(savedModel)) {
+                input.value = savedModel;
+                const savedInfo = parseModelInfo(savedModel);
+                document.getElementById('apDropdownText').innerText = savedInfo.displayName;
+            } else if (autoPilotModels.length > 0) {
+                document.getElementById('apDropdownText').innerText = "Select routing model...";
+            }
+        }
+
+        function toggleApDropdown(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('apDropdownMenu').classList.toggle('hidden');
+        }
+
+        function selectApModel(filename, displayName) {
+            if (!validateApDependencies(filename)) {
+                document.getElementById('apDropdownMenu').classList.add('hidden');
+                // Uncheck autopilot if invalid model selected
+                document.getElementById('autoPilotToggle').checked = false;
+                document.getElementById('autoPilotControls').classList.add('hidden');
+                saveSettings();
+                refreshCustomFlowDisplay();
+                return;
+            }
+
+            document.getElementById('autoPilotModelSelect').value = filename;
+            document.getElementById('apDropdownText').innerText = displayName;
+            document.getElementById('apDropdownMenu').classList.add('hidden');
+            saveSettings();
+        }
+
+        // LocalStorage persistence
+        function saveSettings() {
+            const confVal = document.getElementById('confSlider').value;
+            const aiEnabled = document.getElementById('aiAssistantToggle').checked;
+            const pipelineMode = document.querySelector('input[name="pipelineMode"]:checked').value;
+            const showBatchWarning = document.getElementById('showBatchWarningToggle').checked;
+            const apEnabled = document.getElementById('autoPilotToggle').checked;
+            const apModel = document.getElementById('autoPilotModelSelect').value;
+            const apDataCol = document.getElementById('dataCollectionToggle').checked;
+
+            localStorage.setItem('smiloai_conf_threshold', confVal);
+            localStorage.setItem('smiloai_ai_assistant', aiEnabled);
+            localStorage.setItem('smiloai_pipeline_mode', pipelineMode);
+            localStorage.setItem('smiloai_skip_batch_warning', (!showBatchWarning).toString());
+            localStorage.setItem('smiloai_disabled_models', JSON.stringify(Array.from(disabledModels)));
+            localStorage.setItem('smiloai_autopilot_enabled', apEnabled);
+            localStorage.setItem('smiloai_autopilot_model', apModel);
+            localStorage.setItem('smiloai_data_collection', apDataCol);
+        }
+
+        function loadSettings() {
+            const savedConf = localStorage.getItem('smiloai_conf_threshold');
+            if (savedConf !== null) {
+                document.getElementById('confSlider').value = savedConf;
+                document.getElementById('confValue').innerText = Math.round(savedConf * 100) + '%';
+            }
+
+            const savedAi = localStorage.getItem('smiloai_ai_assistant');
+            if (savedAi !== null) {
+                document.getElementById('aiAssistantToggle').checked = (savedAi === 'true');
+            }
+
+            const savedMode = localStorage.getItem('smiloai_pipeline_mode');
+            if (savedMode !== null) {
+                const radio = document.querySelector(`input[name="pipelineMode"][value="${savedMode}"]`);
+                if (radio) {
+                    radio.checked = true;
+                }
+            }
+
+            const savedPreset = localStorage.getItem('smiloai_last_preset');
+            if (savedPreset && flowPresets[savedPreset]) {
+                currentSelectedPreset = savedPreset;
+                const dropdownText = document.getElementById('presetDropdownText');
+                if(dropdownText) dropdownText.innerText = savedPreset;
+            }
+
+            const savedDisabledModels = localStorage.getItem('smiloai_disabled_models');
+            if (savedDisabledModels) {
+                try {
+                    const parsedDisabled = JSON.parse(savedDisabledModels);
+                    if (Array.isArray(parsedDisabled)) {
+                        disabledModels = new Set(parsedDisabled);
+                    }
+                } catch(e) {
+                    console.error("Failed to parse disabled models from storage");
+                }
+            }
+
+            const skipBatch = localStorage.getItem('smiloai_skip_batch_warning');
+            if (skipBatch !== null) {
+                document.getElementById('showBatchWarningToggle').checked = (skipBatch !== 'true');
+            }
+
+            const savedDataCol = localStorage.getItem('smiloai_data_collection');
+            if (savedDataCol !== null) {
+                document.getElementById('dataCollectionToggle').checked = (savedDataCol === 'true');
+            }
+
+            const savedAutoPilot = localStorage.getItem('smiloai_autopilot_enabled');
+            if (savedAutoPilot !== null) {
+                document.getElementById('autoPilotToggle').checked = (savedAutoPilot === 'true');
+                if (savedAutoPilot === 'true') {
+                    document.getElementById('autoPilotControls').classList.remove('hidden');
+                }
+            }
+        }
+
+        // Application Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            log("Initializing Engine State...");
+
+            loadSettings();
+            toggleCategoryVisuals();
+            togglePipelineUI();
+            updatePresetDropdown();
+
+            const savedFlow = localStorage.getItem('smiloai_flow');
+            if(savedFlow) {
+                try {
+                    const parsed = JSON.parse(savedFlow);
+                    flowNodes = parsed.nodes || [];
+                    flowEdges = parsed.edges || [];
+                } catch(e){}
+            }
+
+            checkEngineState(true);
+            refreshCustomFlowDisplay();
+        });
+
+        async function checkEngineState(isInitialBoot = false) {
+            try {
+                const res = await fetch(`${API_URL}/engine_state`);
+                if (!res.ok) throw new Error("Backend not fully ready");
+                const data = await res.json();
+
+                loadedModelsMemory = data.loaded_models || [];
+                availableCloudModels = data.available_models || [];
+                loadedModelsInfo = data.loaded_models_info || {};
+
+                // Load Auto-Pilot state
+                autoPilotModels = data.autopilot_models || [];
+                autoPilotClasses = data.autopilot_classes || {};
+                updateAutoPilotDropdown();
+
+                const alertBox = document.getElementById('noModelsAlert');
+                if (alertBox) {
+                    if(loadedModelsMemory.length === 0) alertBox.classList.remove('hidden');
+                    else alertBox.classList.add('hidden');
+                }
+
+                if (activeDownloads.size === 0) {
+                    renderCloudModels();
+                }
+
+                document.getElementById('rgbModelList').innerHTML = `<div class="text-gray-400 text-sm italic">No RGB models loaded.</div>`;
+                document.getElementById('xrayModelList').innerHTML = `<div class="text-gray-400 text-sm italic">No X-Ray models loaded.</div>`;
+
+                loadedModelsMemory.forEach(modelName => {
+                    const info = parseModelInfo(modelName);
+                    addModelToActiveUI(modelName, info.category);
+                });
+
+                if (isInitialBoot) {
+                    const loader = document.getElementById('initialBootLoader');
+                    if (loader) {
+                        loader.classList.add('opacity-0', 'pointer-events-none');
+                        setTimeout(() => loader.classList.add('hidden'), 1000);
+                    }
+                }
+            } catch (e) {
+                console.error("Engine Connection Error:", e);
+                log("Backend engine starting up... Waiting.");
+                if (isInitialBoot) {
+                    setTimeout(() => checkEngineState(true), 1500);
+                }
+            }
+        }
+
+        // UI Event Handlers
+        function toggleSettings() {
+            const modal = document.getElementById('fullScreenSettings');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function toggleCategoryVisuals() {
+            const rgbToggle = document.getElementById('rgbMasterToggle');
+            const xrayToggle = document.getElementById('xrayMasterToggle');
+            const rgbSection = document.getElementById('rgbSection');
+            const xraySection = document.getElementById('xraySection');
+
+            if (rgbToggle.checked) xrayToggle.checked = false;
+            else if (xrayToggle.checked) rgbToggle.checked = false;
+
+            rgbToggle.checked ? rgbSection.classList.remove('opacity-40', 'grayscale') : rgbSection.classList.add('opacity-40', 'grayscale');
+            xrayToggle.checked ? xraySection.classList.remove('opacity-40', 'grayscale') : xraySection.classList.add('opacity-40', 'grayscale');
+        }
+
+        function togglePipelineUI() {
+            const isCustom = document.querySelector('input[name="pipelineMode"]:checked').value === 'custom';
+            if (isCustom) {
+                document.getElementById('sequentialUiPanels').classList.add('hidden');
+                document.getElementById('customFlowUiPanel').classList.remove('hidden');
+                document.getElementById('btnOpenFlow').classList.remove('hidden');
+                document.getElementById('autoPilotMainContainer').classList.remove('hidden');
+            } else {
+                document.getElementById('sequentialUiPanels').classList.remove('hidden');
+                document.getElementById('customFlowUiPanel').classList.add('hidden');
+                document.getElementById('btnOpenFlow').classList.add('hidden');
+                document.getElementById('autoPilotMainContainer').classList.add('hidden');
+            }
+            saveSettings();
+            refreshCustomFlowDisplay();
+        }
+
+        function handleImageUpload(input) {
+            if (!input.files || input.files.length === 0) return;
+
+            document.getElementById('scanSummaryContainer').classList.add('hidden');
+            document.getElementById('aiSummarySection').classList.add('hidden');
+            document.getElementById('btnExportPDF').classList.add('hidden');
+            document.getElementById('btnTrainAutoPilot').classList.add('hidden');
+
+            document.getElementById('btnExportPDF').innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                EXPORT HTML REPORT
+            `;
+
+            if (input.files.length > 1) {
+                isBatchMode = true;
+                batchFiles = Array.from(input.files);
+
+                document.getElementById('mainDisplay').classList.add('hidden');
+                document.getElementById('imagePlaceholder').classList.remove('hidden');
+                document.getElementById('imagePlaceholder').innerHTML = `
+                    <svg class="w-16 h-16 mx-auto mb-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    <span class="text-blue-300 font-bold block text-xl mb-2">BATCH MODE READY</span>
+                    <span class="text-gray-400 text-sm">${batchFiles.length} Scans Queued for Processing</span>
+                `;
+                document.getElementById('btnClearScan').classList.remove('hidden');
+            } else {
+                isBatchMode = false;
+                imageFile = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    originalImageBase64 = e.target.result;
+                    document.getElementById('mainDisplay').src = e.target.result;
+                    document.getElementById('mainDisplay').classList.remove('hidden');
+                    document.getElementById('imagePlaceholder').classList.add('hidden');
+
+                    document.getElementById('imagePlaceholder').innerHTML = `
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span id="placeholderText">Awaiting Patient Data...</span>
+                    `;
+                    document.getElementById('btnClearScan').classList.remove('hidden');
+                }
+                reader.readAsDataURL(imageFile);
+            }
+            input.value = "";
+        }
+
+        // Report Generation
+        function exportClinicalReport() {
+            const dateStr = new Date().toLocaleDateString();
+            const patientId = "PT-" + Math.floor(Math.random() * 90000 + 10000);
+
+            let modelsHtml = '';
+            lastScanModelsInfo.forEach(info => {
+                const accDisplay = info.accuracy ? info.accuracy + '%' : 'N/A';
+                modelsHtml += `
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 flex justify-between items-center shadow-sm">
+                        <span class="font-bold text-slate-800">${info.displayName} Model</span>
+                        <span class="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded border border-emerald-200 tracking-wider uppercase">Accuracy: ${accDisplay}</span>
+                    </div>
+                `;
+            });
+            if (!modelsHtml) modelsHtml = '<div class="text-slate-500 italic col-span-full">No specific models recorded.</div>';
+
+            let reportPagesHtml = '';
+
+            if (isBatchMode && batchResults.length > 0) {
+                batchResults.forEach((res, index) => {
+                    let findingsHtml = '';
+                    if (!res.summary || Object.keys(res.summary).length === 0) {
+                        findingsHtml = '<div class="col-span-full text-emerald-600 font-bold p-4 bg-emerald-50 rounded-lg border border-emerald-200">Scan Clear: No anomalies detected.</div>';
+                    } else {
+                        for (const [label, count] of Object.entries(res.summary)) {
+                            findingsHtml += `
+                                <div class="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 flex flex-col items-center justify-center shadow-sm">
+                                    <span class="text-3xl font-black text-slate-800">${count}</span>
+                                    <span class="text-xs text-slate-500 font-bold uppercase mt-1 tracking-wider">${label}</span>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    let aiBlockHtml = '';
+                    if (res.aiText) {
+                        aiBlockHtml = `
+                            <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2zM12 6c-2.8 0-5 2.2-5 5v3l-2 3v2h14v-2l-2-3v-3c0-2.8-2.2-5-5-5zM10 19h4v1a2 2 0 0 1-4 0v-1z"/></svg>
+                                Recommended Treatment Plan
+                            </h2>
+                            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm mb-10">
+                                <p class="text-sm leading-relaxed text-emerald-900 text-justify">${res.aiText}</p>
+                            </div>
+                        `;
+                    }
+
+                    reportPagesHtml += `
+                        ${index > 0 ? '<div class="page-break"></div>' : ''}
+                        <div class="mb-8 border-b-2 border-slate-800 pb-2">
+                            <h2 class="text-2xl font-black text-slate-900">Scan Reference: ${res.filename}</h2>
+                            <p class="text-slate-500 text-sm">Image ${index + 1} of ${batchResults.length}</p>
+                            ${res.routedFlow ? `<span class="inline-block text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full border border-purple-200 mt-3">Auto-Routed Flow: ${res.routedFlow}</span>` : ''}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                                <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Original Input</span>
+                                <img src="${res.originalBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Original Scan">
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                                <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">AI Diagnostics Layer</span>
+                                <img src="${res.processedBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Processed Scan">
+                            </div>
+                        </div>
+
+                        <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            Diagnostic Findings Matrix
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                            ${findingsHtml}
+                        </div>
+
+                        ${aiBlockHtml}
+                    `;
+                });
+            } else {
+                const processedImageBase64 = document.getElementById('mainDisplay').src;
+                const aiTextHtml = document.getElementById('aiSummaryText').innerHTML;
+
+                let findingsHtml = '';
+                const summaryListContainer = document.getElementById('scanSummaryList');
+                const uiItems = summaryListContainer.querySelectorAll('div.bg-white\\/5');
+
+                if (!uiItems || uiItems.length === 0) {
+                    findingsHtml = '<div class="col-span-full text-emerald-600 font-bold p-4 bg-emerald-50 rounded-lg border border-emerald-200">Scan Clear: No anomalies detected.</div>';
+                } else {
+                    uiItems.forEach(item => {
+                        const spans = item.querySelectorAll('span');
+                        if (spans.length >= 2) {
+                            const count = spans[0].innerText;
+                            const label = spans[1].innerText;
+                            findingsHtml += `
+                                <div class="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 flex flex-col items-center justify-center shadow-sm">
+                                    <span class="text-3xl font-black text-slate-800">${count}</span>
+                                    <span class="text-xs text-slate-500 font-bold uppercase mt-1 tracking-wider">${label}</span>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+
+                let aiBlockHtml = '';
+                if (aiTextHtml && aiTextHtml.trim() !== '') {
+                    aiBlockHtml = `
+                        <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2zM12 6c-2.8 0-5 2.2-5 5v3l-2 3v2h14v-2l-2-3v-3c0-2.8-2.2-5-5-5zM10 19h4v1a2 2 0 0 1-4 0v-1z"/></svg>
+                            Recommended Treatment Plan
+                        </h2>
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm mb-10">
+                            <p class="text-sm leading-relaxed text-emerald-900 text-justify">${aiTextHtml}</p>
+                        </div>
+                    `;
+                }
+
+                const scanTimeEl = document.getElementById('scanTime');
+                const routedFlow = scanTimeEl.getAttribute('data-routed') || '';
+
+                reportPagesHtml = `
+                    ${routedFlow ? `<div class="mb-6"><span class="inline-block text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full border border-purple-200">Auto-Routed Flow: ${routedFlow}</span></div>` : ''}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Original Input</span>
+                            <img src="${originalImageBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Original Scan">
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">AI Diagnostics Layer</span>
+                            <img src="${processedImageBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Processed Scan">
+                        </div>
+                    </div>
+
+                    <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        Diagnostic Findings Matrix
+                    </h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                        ${findingsHtml}
+                    </div>
+
+                    ${aiBlockHtml}
+                `;
+            }
+
+            const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmiloAi Clinical Report - ${isBatchMode ? 'BATCH' : patientId}</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <style>
+        body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        @media print {
+            body { background-color: white; }
+            .print-hide { display: none !important; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 p-4 md:p-8">
+    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        <div class="bg-slate-900 text-white p-8 flex justify-between items-center border-b-4 border-blue-500">
+            <div class="flex items-center gap-5">
+                <img src="https://i.imgur.com/It3wa9i.png" alt="SmiloAi Logo" class="h-16 w-auto object-contain">
+                <div>
+                    <h1 class="text-3xl font-black tracking-tight">SmiloAi Clinical Report ${isBatchMode ? '(BATCH)' : ''}</h1>
+                    <p class="text-blue-300 text-sm font-bold uppercase tracking-widest mt-1">Advanced Dental Detection AI</p>
+                </div>
+            </div>
+            <button onclick="window.print()" class="print-hide bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print / Save PDF
+            </button>
+        </div>
+
+        <div class="p-8">
+            <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200 mb-10">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Date of Scan</span>
+                    <span class="text-sm font-bold text-slate-900">${dateStr}</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Analysis Mode</span>
+                    <span class="text-sm font-bold text-slate-900">AI Assisted (SmiloAi v5) ${isBatchMode ? '- BATCH' : ''}</span>
+                </div>
+            </div>
+
+            <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                AI Specialists Deployed
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                ${modelsHtml}
+            </div>
+
+            <div class="page-break"></div>
+
+            ${reportPagesHtml}
+
+            <div class="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
+                Generated securely by SmiloAi Diagnostic Engine. This is an AI-assisted diagnostic tool and does not replace professional medical judgment.<br>For clinical reference only.
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SmiloAi_Report_${isBatchMode ? 'BATCH' : patientId}.html`;
+            document.body.appendChild(a);
+
+            a.click();
+
+            setTimeout(() => {
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+        }
+
+        // Modal Handlers: State Clearing
+        function showClearWarning() {
+            const modal = document.getElementById('clearWarningModal');
+            const box = document.getElementById('clearWarningBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function cancelClear() {
+            const modal = document.getElementById('clearWarningModal');
+            const box = document.getElementById('clearWarningBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function confirmClear() {
+            imageFile = null;
+            isBatchMode = false;
+            batchFiles = [];
+            batchResults = [];
+
+            document.getElementById('imageInput').value = "";
+            document.getElementById('mainDisplay').classList.add('hidden');
+            document.getElementById('mainDisplay').src = "";
+            document.getElementById('imagePlaceholder').classList.remove('hidden');
+            document.getElementById('imagePlaceholder').innerHTML = `
+                <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span id="placeholderText">Awaiting Patient Data...</span>
+            `;
+            document.getElementById('scanSummaryContainer').classList.add('hidden');
+            document.getElementById('aiSummarySection').classList.add('hidden');
+            document.getElementById('btnExportPDF').classList.add('hidden');
+            document.getElementById('btnClearScan').classList.add('hidden');
+            document.getElementById('btnTrainAutoPilot').classList.add('hidden');
+            cancelClear();
+        }
+
+        function showClearFlowWarning() {
+            if (flowNodes.length === 0) return;
+            const modal = document.getElementById('clearFlowWarningModal');
+            const box = document.getElementById('clearFlowWarningBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function cancelClearFlow() {
+            const modal = document.getElementById('clearFlowWarningModal');
+            const box = document.getElementById('clearFlowWarningBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function confirmClearFlow() {
+            flowNodes = [];
+            flowEdges = [];
+            activeWiring = null;
+            clearPresetSelection();
+            renderFlowCanvas();
+            cancelClearFlow();
+            centerFlowView();
+        }
+
+        // Modal Handlers: Batch Processing Warnings
+        function showBatchWarning() {
+            document.getElementById('skipBatchWarningToggle').checked = false;
+
+            const modal = document.getElementById('batchWarningModal');
+            const box = document.getElementById('batchWarningBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeBatchWarning() {
+            const modal = document.getElementById('batchWarningModal');
+            const box = document.getElementById('batchWarningBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function confirmBatchWarning(keepAiOn) {
+            const skipToggle = document.getElementById('skipBatchWarningToggle').checked;
+            if (skipToggle) {
+                localStorage.setItem('smiloai_skip_batch_warning', 'true');
+                document.getElementById('showBatchWarningToggle').checked = false;
+            }
+            closeBatchWarning();
+
+            setTimeout(() => {
+                executeBatchInference(keepAiOn);
+            }, 300);
+        }
+
+        // Dropdown & Preset Management
+        document.addEventListener('click', (e) => {
+            // Preset Dropdown
+            const dropdown = document.getElementById('presetDropdownMenu');
+            const btn = document.getElementById('presetDropdownBtn');
+            if (dropdown && !dropdown.classList.contains('hidden') && e.target !== btn && !btn.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+
+            // AutoPilot Dropdown
+            const apDropdown = document.getElementById('apDropdownMenu');
+            const apBtn = document.getElementById('apDropdownBtn');
+            if (apDropdown && !apDropdown.classList.contains('hidden') && e.target !== apBtn && !apBtn.contains(e.target)) {
+                apDropdown.classList.add('hidden');
+            }
+
+            // Unnamed Flow Dropdown
+            const unfDropdown = document.getElementById('unnamedFlowDropdownMenu');
+            const unfBtn = document.getElementById('unnamedFlowDropdownBtn');
+            if (unfDropdown && !unfDropdown.classList.contains('hidden') && e.target !== unfBtn && !unfBtn.contains(e.target)) {
+                unfDropdown.classList.add('hidden');
+            }
+        });
+
+        function toggleUnnamedFlowDropdown(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('unnamedFlowDropdownMenu').classList.toggle('hidden');
+        }
+
+        function selectUnnamedFlowPreset(name) {
+            document.getElementById('unnamedFlowSelectValue').value = name;
+            const textEl = document.getElementById('unnamedFlowDropdownText');
+            textEl.innerText = name;
+            textEl.classList.remove('text-gray-400');
+            textEl.classList.add('text-white');
+            document.getElementById('unnamedFlowDropdownMenu').classList.add('hidden');
+            document.getElementById('unnamedFlowInput').value = '';
+        }
+
+        function clearUnnamedFlowDropdown() {
+            document.getElementById('unnamedFlowSelectValue').value = '';
+            const textEl = document.getElementById('unnamedFlowDropdownText');
+            textEl.innerText = 'Select Existing Preset';
+            textEl.classList.remove('text-white');
+            textEl.classList.add('text-gray-400');
+        }
+
+        function togglePresetDropdown(e) {
+            if(e) e.stopPropagation();
+            document.getElementById('presetDropdownMenu').classList.toggle('hidden');
+        }
+
+        function updatePresetDropdown() {
+            const list = document.getElementById('presetDropdownList');
+            list.innerHTML = '';
+
+            const keys = Object.keys(flowPresets);
+            if (keys.length === 0) {
+                list.innerHTML = `<div class="px-4 py-2 text-xs text-gray-500 italic">No presets saved.</div>`;
+                return;
+            }
+
+            keys.forEach(name => {
+                list.innerHTML += `
+                    <button onclick="selectPreset('${name}')" class="w-full text-left px-4 py-2 text-xs font-bold text-gray-300 hover:bg-blue-500/20 hover:text-white transition-colors border-l-2 border-transparent hover:border-blue-500">
+                        ${name}
+                    </button>
+                `;
+            });
+        }
+
+        function selectPreset(name) {
+            currentSelectedPreset = name;
+            localStorage.setItem('smiloai_last_preset', name);
+            document.getElementById('presetDropdownText').innerText = name;
+            document.getElementById('presetDropdownMenu').classList.add('hidden');
+
+            if (!flowPresets[name]) return;
+            flowNodes = JSON.parse(JSON.stringify(flowPresets[name].nodes));
+            flowEdges = JSON.parse(JSON.stringify(flowPresets[name].edges));
+            activeWiring = null;
+            renderFlowCanvas();
+            setTimeout(centerFlowView, 50);
+            refreshCustomFlowDisplay();
+        }
+
+        function clearPresetSelection() {
+            currentSelectedPreset = "";
+            localStorage.removeItem('smiloai_last_preset');
+            document.getElementById('presetDropdownText').innerText = "Load Preset";
+            refreshCustomFlowDisplay();
+        }
+
+        function showSavePresetModal() {
+            if (flowNodes.length === 0) return alert("Canvas is empty. Build a flow before saving a preset.");
+            document.getElementById('presetNameInput').value = '';
+            const modal = document.getElementById('savePresetModal');
+            const box = document.getElementById('savePresetBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+            document.getElementById('presetNameInput').focus();
+        }
+
+        function closeSavePresetModal() {
+            const modal = document.getElementById('savePresetModal');
+            const box = document.getElementById('savePresetBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function confirmSavePreset() {
+            const name = document.getElementById('presetNameInput').value.trim();
+            if (!name) return alert("Please enter a valid name for the preset.");
+
+            flowPresets[name] = {
+                nodes: JSON.parse(JSON.stringify(flowNodes)),
+                edges: JSON.parse(JSON.stringify(flowEdges))
+            };
+
+            localStorage.setItem('smiloai_flow_presets', JSON.stringify(flowPresets));
+            updatePresetDropdown();
+
+            currentSelectedPreset = name;
+            localStorage.setItem('smiloai_last_preset', name);
+            document.getElementById('presetDropdownText').innerText = name;
+
+            closeSavePresetModal();
+            refreshCustomFlowDisplay();
+        }
+
+        function deleteSelectedPreset() {
+            if (!currentSelectedPreset) return alert("Please select a preset from the dropdown to delete.");
+
+            document.getElementById('presetToDeleteName').innerText = currentSelectedPreset;
+            const modal = document.getElementById('deletePresetWarningModal');
+            const box = document.getElementById('deletePresetWarningBox');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function cancelDeletePreset() {
+            const modal = document.getElementById('deletePresetWarningModal');
+            const box = document.getElementById('deletePresetWarningBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function confirmDeletePreset() {
+            delete flowPresets[currentSelectedPreset];
+            localStorage.setItem('smiloai_flow_presets', JSON.stringify(flowPresets));
+            updatePresetDropdown();
+            clearPresetSelection();
+
+            flowNodes = [];
+            flowEdges = [];
+            activeWiring = null;
+            renderFlowCanvas();
+
+            cancelDeletePreset();
+        }
+
+        // DAG Flow Builder Implementation
+        function openFlowBuilder() {
+            document.getElementById('fullScreenSettings').classList.add('hidden');
+            document.getElementById('flowBuilderModal').classList.remove('hidden');
+            document.getElementById('flowBuilderModal').classList.add('flex');
+
+            const savedFlow = localStorage.getItem('smiloai_flow');
+            if(savedFlow) {
+                try {
+                    const parsed = JSON.parse(savedFlow);
+                    flowNodes = parsed.nodes || [];
+                    flowEdges = parsed.edges || [];
+                } catch(e){}
+            }
+
+            populateFlowSidebar();
+            renderFlowCanvas();
+            setTimeout(centerFlowView, 50);
+        }
+
+        function closeFlowBuilder() {
+            const savedFlow = localStorage.getItem('smiloai_flow');
+            if(savedFlow) {
+                try {
+                    const parsed = JSON.parse(savedFlow);
+                    flowNodes = parsed.nodes || [];
+                    flowEdges = parsed.edges || [];
+                } catch(e){}
+            } else {
+                flowNodes = [];
+                flowEdges = [];
+            }
+            activeWiring = null;
+            clearPresetSelection();
+            renderFlowCanvas();
+
+            document.getElementById('flowBuilderModal').classList.add('hidden');
+            document.getElementById('flowBuilderModal').classList.remove('flex');
+            document.getElementById('fullScreenSettings').classList.remove('hidden');
+        }
+
+        function saveAndCloseFlow() {
+            let errors = [];
+            if (flowNodes.length === 0) {
+                errors.push("Your canvas is completely empty.");
+            } else {
+                const startNode = flowNodes.find(n => n.type === 'start');
+                const endNode = flowNodes.find(n => n.type === 'end');
+
+                if (!startNode) errors.push("Missing a START node.");
+                if (!endNode) errors.push("Missing an END node.");
+
+                if (startNode && endNode) {
+                    if (flowEdges.length === 0) {
+                        errors.push("There are no wires! You must connect your flow.");
+                    } else {
+                        const startConnected = flowEdges.some(e => e.from === startNode.id);
+                        const endConnected = flowEdges.some(e => e.to === endNode.id);
+
+                        if (!startConnected) errors.push("Your START node isn't connected to anything.");
+                        if (!endConnected) errors.push("Your END node doesn't have any incoming wires.");
+                    }
+                }
+            }
+
+            if (errors.length > 0) {
+                document.getElementById('flowValidationMsg').innerHTML = errors.join("<br><br>");
+                showFlowValidationWarning();
+                return;
+            }
+
+            forceSaveAndCloseFlow();
+        }
+
+        function showFlowValidationWarning() {
+            const modal = document.getElementById('flowValidationWarningModal');
+            const box = document.getElementById('flowValidationWarningBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeFlowValidationWarning() {
+            const modal = document.getElementById('flowValidationWarningModal');
+            const box = document.getElementById('flowValidationWarningBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function forceSaveAndCloseFlow() {
+            closeFlowValidationWarning();
+
+            const flowData = { nodes: flowNodes, edges: flowEdges };
+            localStorage.setItem('smiloai_flow', JSON.stringify(flowData));
+
+            if (currentSelectedPreset) {
+                flowPresets[currentSelectedPreset] = {
+                    nodes: JSON.parse(JSON.stringify(flowNodes)),
+                    edges: JSON.parse(JSON.stringify(flowEdges))
+                };
+                localStorage.setItem('smiloai_flow_presets', JSON.stringify(flowPresets));
+                updatePresetDropdown();
+            }
+
+            activeWiring = null;
+            document.getElementById('presetDropdownText').innerText = currentSelectedPreset || "Load Preset";
+
+            document.getElementById('flowBuilderModal').classList.add('hidden');
+            document.getElementById('flowBuilderModal').classList.remove('flex');
+            document.getElementById('fullScreenSettings').classList.remove('hidden');
+
+            refreshCustomFlowDisplay();
+        }
+
+        function populateFlowSidebar() {
+            const sidebar = document.getElementById('flowSidebarModels');
+            sidebar.innerHTML = '';
+
+            let activeCanvasMode = null;
+            for (let node of flowNodes) {
+                if (node.type === 'model') {
+                    const info = parseModelInfo(node.modelName);
+                    activeCanvasMode = info.category;
+                    break;
+                }
+            }
+
+            loadedModelsMemory.forEach(modelName => {
+                const info = parseModelInfo(modelName);
+                const isLockedOut = activeCanvasMode && info.category !== activeCanvasMode;
+
+                if (isLockedOut) {
+                    sidebar.innerHTML += `
+                        <button disabled class="w-full text-left p-2 bg-white/5 border border-white/10 rounded transition text-xs font-bold text-gray-500 truncate opacity-30 cursor-not-allowed" title="Incompatible: Canvas is currently using ${activeCanvasMode.toUpperCase()} models.">
+                            🔒 ${info.displayName}
+                        </button>
+                    `;
+                } else {
+                    sidebar.innerHTML += `
+                        <button onclick="addFlowNode('model', '${modelName}')" class="w-full text-left p-2 bg-white/5 border border-white/10 hover:border-blue-500/50 rounded transition text-xs font-bold text-gray-300 truncate">
+                            + ${info.displayName}
+                        </button>
+                    `;
+                }
+            });
+        }
+
+        function addFlowNode(type, modelName = null) {
+            const uuid = 'node_' + Math.random().toString(36).substr(2, 9);
+
+            const canvasRect = document.getElementById('flowCanvas').getBoundingClientRect();
+            const w = canvasRect.width || 800;
+            const h = canvasRect.height || 600;
+
+            let targetX = ((w / 2) - flowPanX) / flowZoom;
+            let targetY = ((h / 2) - flowPanY) / flowZoom;
+
+            targetX += (Math.random() * 40 - 20);
+            targetY += (Math.random() * 40 - 20);
+
+            if (type === 'start') { targetX -= 150; }
+            if (type === 'end') { targetX += 150; }
+
+            const newNode = {
+                id: uuid, type: type, x: targetX, y: targetY, modelName: modelName, filterResults: true
+            };
+            flowNodes.push(newNode);
+
+            clearPresetSelection();
+            renderFlowCanvas();
+        }
+
+        function deleteNode(nodeId) {
+            flowNodes = flowNodes.filter(n => n.id !== nodeId);
+            flowEdges = flowEdges.filter(e => e.from !== nodeId && e.to !== nodeId);
+            clearPresetSelection();
+            renderFlowCanvas();
+        }
+
+        function handlePortClick(nodeId, portName, portType) {
+            if (!activeWiring) {
+                activeWiring = { nodeId, portName, portType };
+                renderFlowCanvas();
+                return;
+            }
+
+            if (activeWiring.nodeId === nodeId) {
+                activeWiring = null;
+            } else if (activeWiring.portType !== portType) {
+                let fromNode = activeWiring.portType === 'out' ? activeWiring.nodeId : nodeId;
+                let fromPort = activeWiring.portType === 'out' ? activeWiring.portName : portName;
+                let toNode = activeWiring.portType === 'in' ? activeWiring.nodeId : nodeId;
+                let toPort = activeWiring.portType === 'in' ? activeWiring.portName : portName;
+
+                const exists = flowEdges.find(e => e.from === fromNode && e.fromPort === fromPort && e.to === toNode);
+                if(!exists) {
+                    flowEdges.push({ from: fromNode, fromPort: fromPort, to: toNode, toPort: toPort });
+                    clearPresetSelection();
+                }
+                activeWiring = null;
+            } else {
+                activeWiring = { nodeId, portName, portType };
+            }
+            renderFlowCanvas();
+        }
+
+        function deleteEdge(index) {
+            flowEdges.splice(index, 1);
+            clearPresetSelection();
+            renderFlowCanvas();
+        }
+
+        function getPortId(nodeId, portName, portType) {
+            return `port-${nodeId}-${portName.replace(/[^a-zA-Z0-9]/g, '_')}-${portType}`;
+        }
+
+        function updateNodeFilter(nodeId, isChecked) {
+            const node = flowNodes.find(n => n.id === nodeId);
+            if (node) {
+                node.filterResults = isChecked;
+                clearPresetSelection();
+            }
+        }
+
+        function renderFlowCanvas() {
+            populateFlowSidebar();
+
+            const canvasLayer = document.getElementById('flowTransformLayer');
+            Array.from(canvasLayer.children).forEach(child => {
+                if(child.id !== 'wireCanvas') child.remove();
+            });
+
+            flowNodes.forEach(node => {
+                const el = document.createElement('div');
+                let nodeClasses = 'flow-node';
+                el.id = node.id;
+                el.style.left = node.x + 'px';
+                el.style.top = node.y + 'px';
+
+                let title = node.type.toUpperCase();
+                let colorClass = '';
+                let isMissing = false;
+
+                if (node.type === 'start') { colorClass = 'text-emerald-400'; }
+                else if (node.type === 'end') { colorClass = 'text-red-400'; }
+                else if (node.type === 'model') {
+                    title = parseModelInfo(node.modelName).displayName;
+                    if (!loadedModelsMemory.includes(node.modelName)) {
+                        isMissing = true;
+                        title = `⚠️ ${title} (MISSING)`;
+                        colorClass = 'text-red-500';
+                        nodeClasses += ' border-red-500/30 bg-red-950/40 opacity-80';
+                    } else {
+                        colorClass = 'text-blue-400';
+                    }
+                }
+
+                el.className = nodeClasses;
+
+                let inPortHTML = '';
+                if(node.type !== 'start') {
+                    let isWiringIn = activeWiring && activeWiring.nodeId === node.id && activeWiring.portType === 'in';
+                    let portColorClass = isMissing ? 'bg-red-900/50' : 'bg-gray-400';
+                    let pointerEvents = isMissing ? 'pointer-events-none opacity-50' : '';
+                    let clickEvt = isMissing ? '' : `onclick="handlePortClick('${node.id}', 'in', 'in')"`;
+
+                    inPortHTML = `<div id="${getPortId(node.id, 'in', 'in')}" class="flow-port ${portColorClass} ${pointerEvents} mt-2 ${isWiringIn ? 'active-wiring' : ''}" ${clickEvt}></div>`;
+                }
+
+                let outPortHTML = '';
+                if(node.type !== 'end') {
+                    if (node.type === 'start') {
+                        let isWiringOut = activeWiring && activeWiring.nodeId === node.id && activeWiring.portName === 'out';
+                        outPortHTML = `<div class="flex items-center gap-2 justify-end mt-2"><span class="text-[10px] text-gray-500 uppercase">output</span><div id="${getPortId(node.id, 'out', 'out')}" class="flow-port bg-emerald-400 ${isWiringOut ? 'active-wiring' : ''}" onclick="handlePortClick('${node.id}', 'out', 'out')"></div></div>`;
+                    } else if (node.type === 'model') {
+                        let classes = loadedModelsInfo[node.modelName] || ['detected'];
+                        classes.forEach(cls => {
+                            let isWiringOut = activeWiring && activeWiring.nodeId === node.id && activeWiring.portName === cls;
+                            let portColorClassOut = isMissing ? 'bg-red-900/50' : 'bg-blue-400';
+                            let pointerEventsOut = isMissing ? 'pointer-events-none opacity-50' : '';
+                            let clickEvt = isMissing ? '' : `onclick="handlePortClick('${node.id}', '${cls}', 'out')"`;
+
+                            outPortHTML += `<div class="flex items-center gap-2 justify-end mt-2"><span class="text-[10px] ${isMissing ? 'text-red-500/50' : 'text-gray-400'} uppercase">${cls}</span><div id="${getPortId(node.id, cls, 'out')}" class="flow-port ${portColorClassOut} ${pointerEventsOut} ${isWiringOut ? 'active-wiring' : ''}" ${clickEvt}></div></div>`;
+                        });
+                    }
+                }
+
+                let filterToggleHTML = '';
+                if (node.type === 'model') {
+                    let isChecked = node.filterResults !== false;
+                    let disabledState = isMissing ? 'opacity-30 pointer-events-none' : '';
+                    filterToggleHTML = `
+                        <div class="mt-4 pt-2 border-t border-white/10 flex justify-between items-center gap-3 ${disabledState}">
+                            <span class="text-[9px] text-gray-400 uppercase font-bold tracking-wider" title="If OFF, all outputs will display directly to the final image without needing to be wired to the END node.">Filter Output</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" ${isChecked ? 'checked' : ''} onchange="updateNodeFilter('${node.id}', this.checked)">
+                                <div class="w-7 h-4 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"></div>
+                            </label>
+                        </div>
+                    `;
+                }
+
+                el.innerHTML = `
+                    <div class="flow-node-header ${colorClass}" onmousedown="startDragNode(event, '${node.id}')">
+                        ${title} <span class="text-gray-600 hover:text-red-400 cursor-pointer px-1" onclick="deleteNode('${node.id}')">✕</span>
+                    </div>
+                    <div class="flex justify-between items-start min-h-[20px]">
+                        <div class="flex flex-col">${inPortHTML}</div>
+                        <div class="flex flex-col">${outPortHTML}</div>
+                    </div>
+                    ${filterToggleHTML}
+                `;
+                canvasLayer.appendChild(el);
+            });
+
+            setTimeout(updateSvgEdges, 10);
+        }
+
+        function updateSvgEdges() {
+            const svg = document.getElementById('wireCanvas');
+            svg.innerHTML = '';
+
+            flowEdges.forEach((edge, index) => {
+                const fromPortId = getPortId(edge.from, edge.fromPort, 'out');
+                const toPortId = getPortId(edge.to, edge.toPort, 'in');
+
+                const fromPortEl = document.getElementById(fromPortId);
+                const toPortEl = document.getElementById(toPortId);
+
+                if(!fromPortEl || !toPortEl) return;
+
+                const fromRect = fromPortEl.getBoundingClientRect();
+                const toRect = toPortEl.getBoundingClientRect();
+                const canvasRect = svg.getBoundingClientRect();
+
+                const x1 = (fromRect.left - canvasRect.left) / flowZoom + (fromRect.width / flowZoom / 2);
+                const y1 = (fromRect.top - canvasRect.top) / flowZoom + (fromRect.height / flowZoom / 2);
+                const x2 = (toRect.left - canvasRect.left) / flowZoom + (toRect.width / flowZoom / 2);
+                const y2 = (toRect.top - canvasRect.top) / flowZoom + (toRect.height / flowZoom / 2);
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('class', 'svg-wire pointer-events-auto');
+                const curveForce = Math.max(50, Math.abs(x2 - x1) * 0.4);
+                path.setAttribute('d', `M ${x1} ${y1} C ${x1 + curveForce} ${y1}, ${x2 - curveForce} ${y2}, ${x2} ${y2}`);
+                path.ondblclick = () => deleteEdge(index);
+
+                svg.appendChild(path);
+            });
+        }
+
+        // Canvas Interaction Handlers
+        function applyFlowTransform() {
+            const layer = document.getElementById('flowTransformLayer');
+            layer.style.transform = `translate(${flowPanX}px, ${flowPanY}px) scale(${flowZoom})`;
+
+            const canvas = document.getElementById('flowCanvas');
+            canvas.style.backgroundPosition = `${flowPanX}px ${flowPanY}px`;
+            canvas.style.backgroundSize = `${40 * flowZoom}px ${40 * flowZoom}px`;
+        }
+
+        function centerFlowView() {
+            if (flowNodes.length === 0) {
+                flowPanX = 0; flowPanY = 0; flowZoom = 1;
+                applyFlowTransform();
+                return;
+            }
+
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            flowNodes.forEach(n => {
+                if (n.x < minX) minX = n.x;
+                if (n.y < minY) minY = n.y;
+                if (n.x > maxX) maxX = n.x;
+                if (n.y > maxY) maxY = n.y;
+            });
+
+            minX -= 50; minY -= 50;
+            maxX += 250; maxY += 150;
+
+            const canvasRect = document.getElementById('flowCanvas').getBoundingClientRect();
+            if (canvasRect.width === 0) return;
+
+            const graphWidth = maxX - minX;
+            const graphHeight = maxY - minY;
+
+            let targetZoom = Math.min(
+                (canvasRect.width * 0.8) / graphWidth,
+                (canvasRect.height * 0.8) / graphHeight
+            );
+            targetZoom = Math.max(0.3, Math.min(targetZoom, 1.2));
+
+            flowZoom = targetZoom;
+            const centerX = minX + graphWidth / 2;
+            const centerY = minY + graphHeight / 2;
+
+            flowPanX = (canvasRect.width / 2) - (centerX * flowZoom);
+            flowPanY = (canvasRect.height / 2) - (centerY * flowZoom);
+
+            applyFlowTransform();
+        }
+
+        function handleCanvasZoom(e) {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            let newZoom = flowZoom * zoomFactor;
+
+            newZoom = Math.max(0.15, Math.min(newZoom, 2.5));
+
+            const rect = document.getElementById('flowCanvas').getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            flowPanX = mouseX - (mouseX - flowPanX) * (newZoom / flowZoom);
+            flowPanY = mouseY - (mouseY - flowPanY) * (newZoom / flowZoom);
+            flowZoom = newZoom;
+
+            applyFlowTransform();
+            updateSvgEdges();
+        }
+
+        function startCanvasPan(e) {
+            if (e.target.id === 'flowCanvas' || e.target.id === 'flowTransformLayer' || e.target.id === 'wireCanvas') {
+                isPanningCanvas = true;
+                startPanClientX = e.clientX - flowPanX;
+                startPanClientY = e.clientY - flowPanY;
+            }
+        }
+
+        function startDragNode(e, nodeId) {
+            e.preventDefault();
+            e.stopPropagation();
+            const node = flowNodes.find(n => n.id === nodeId);
+            dragInfo = {
+                node: node,
+                startX: e.clientX,
+                startY: e.clientY,
+                initialX: node.x,
+                initialY: node.y
+            };
+        }
+
+        function handleCanvasMouseMove(e) {
+            if (isPanningCanvas) {
+                flowPanX = e.clientX - startPanClientX;
+                flowPanY = e.clientY - startPanClientY;
+                applyFlowTransform();
+                return;
+            }
+
+            if (!dragInfo) return;
+
+            const dx = (e.clientX - dragInfo.startX) / flowZoom;
+            const dy = (e.clientY - dragInfo.startY) / flowZoom;
+
+            dragInfo.node.x = dragInfo.initialX + dx;
+            dragInfo.node.y = dragInfo.initialY + dy;
+
+            document.getElementById(dragInfo.node.id).style.left = dragInfo.node.x + 'px';
+            document.getElementById(dragInfo.node.id).style.top = dragInfo.node.y + 'px';
+            clearPresetSelection();
+            updateSvgEdges();
+        }
+
+        document.addEventListener('mouseup', () => {
+            dragInfo = null;
+            isPanningCanvas = false;
+        });
+
+        // Model Registry and Cloud Synchronization
+        function parseModelInfo(filename) {
+            let displayName = filename.split('.')[0];
+            let category = 'rgb';
+            let accuracy = null;
+
+            const baseName = filename.replace(/\.(onnx|pt)$/i, '');
+
+            // ✨ THE FIX: Handle Auto-Pilot specific naming conventions perfectly
+            if (baseName.toUpperCase().startsWith("AUTOPILOT_")) {
+                const parts = baseName.split('_');
+                // Format: AUTOPILOT_{accuracy}_{date}_{time}
+                displayName = "Auto-Pilot Router";
+                category = "auto";
+                if (parts.length >= 2) {
+                    accuracy = parts[1];
+                }
+            } else {
+                // Standard Model Format (e.g., CariesMD_XR_95)
+                const parts = baseName.split('_');
+                if (parts.length >= 3) {
+                    displayName = parts[0].replace(/MD$/i, '');
+                    const catCode = parts[1].toUpperCase();
+                    if (catCode === 'XR') category = 'xray';
+                    else if (catCode === 'R') category = 'rgb';
+                    accuracy = parts[2];
+                } else {
+                    if (filename.toUpperCase().includes("RADIO") || filename.toUpperCase().includes("GING")) {
+                        category = 'xray';
+                    }
+                }
+            }
+
+            try {
+                const customCats = JSON.parse(localStorage.getItem('smiloai_custom_categories')) || {};
+                if (customCats[filename]) {
+                    category = customCats[filename];
+                }
+            } catch(e) {}
+
+            return { filename, displayName, category, accuracy };
+        }
+
+        function renderCloudModels() {
+            const list = document.getElementById('cloudModelList');
+            list.innerHTML = "";
+
+            if (availableCloudModels.length === 0) {
+                list.innerHTML = `<div class="text-gray-400 text-sm italic p-3">No models found in cloud databanks.</div>`;
+                return;
+            }
+
+            availableCloudModels.forEach(modelName => {
+                const isLoaded = loadedModelsMemory.includes(modelName);
+                const bgClass = isLoaded ? "bg-slate-800/80 border-slate-700 opacity-60" : "bg-white/5 border-white/10 hover:border-blue-500/50";
+                const info = parseModelInfo(modelName);
+                const catColor = info.category === 'rgb' ? 'text-blue-400' : 'text-purple-400';
+
+                let btnHTML = isLoaded
+                    ? `<div class="flex items-center gap-3">
+                           <span class="text-emerald-400 text-xs font-bold uppercase tracking-wide flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> Installed</span>
+                           <button onclick="removeModel('${modelName}', this)" class="relative flex items-center justify-center p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 transition group" title="Delete Model Completely">
+                               <svg class="w-4 h-4 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                           </button>
+                       </div>`
+                    : `
+                    <select id="cat-${modelName}" class="hidden">
+                        <option value="${info.category}" selected></option>
+                    </select>
+                    <button onclick="downloadCloudModel('${modelName}', this)" class="relative flex items-center justify-center w-9 h-9 rounded-full bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 transition group disabled:opacity-100 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5 group-hover:scale-110 transition btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+
+                        <svg class="w-full h-full transform -rotate-90 hidden progress-icon absolute top-0 left-0" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-600 opacity-50"></circle>
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" stroke-width="2" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" class="text-cyan-400 progress-circle transition-all duration-200" stroke-linecap="round"></circle>
+                        </svg>
+                        <span class="absolute text-[8px] font-bold text-cyan-400 hidden progress-text">0%</span>
+                    </button>`;
+
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-3 rounded-lg border ${bgClass} transition-all">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-sm font-bold text-white uppercase tracking-wide">${info.displayName} MODEL</span>
+                                ${info.accuracy ? `<span class="text-[9px] bg-white/10 text-emerald-300 font-mono px-2 py-0.5 rounded border border-white/10 shadow-inner">${info.accuracy}% ACCURACY</span>` : ''}
+                            </div>
+                            <div class="text-[10px] uppercase font-bold tracking-widest ${catColor}">${info.category} target</div>
+                        </div>
+                        <div class="flex items-center">
+                            ${btnHTML}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function showAccuracyWarning(accuracy) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('accuracyWarningModal');
+                const box = document.getElementById('accuracyWarningBox');
+                document.getElementById('accuracyWarningText').innerText = `This model has an accuracy of ${accuracy}%. Are you sure you want to deploy it in a clinical setting?`;
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    box.classList.remove('scale-95');
+                }, 10);
+
+                const btnCancel = document.getElementById('btnCancelDownload');
+                const btnConfirm = document.getElementById('btnConfirmDownload');
+
+                const cleanup = () => {
+                    modal.classList.add('opacity-0');
+                    box.classList.add('scale-95');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                    }, 300);
+                    btnCancel.removeEventListener('click', onCancel);
+                    btnConfirm.removeEventListener('click', onConfirm);
+                };
+
+                const onCancel = () => { cleanup(); resolve(false); };
+                const onConfirm = () => { cleanup(); resolve(true); };
+
+                btnCancel.addEventListener('click', onCancel);
+                btnConfirm.addEventListener('click', onConfirm);
+            });
+        }
+
+        async function downloadCloudModel(modelName, btnElement) {
+            const categorySelect = document.getElementById(`cat-${modelName}`);
+            const selectedMode = categorySelect.value;
+            const info = parseModelInfo(modelName);
+
+            if (info.accuracy && parseInt(info.accuracy) < 80) {
+                const confirmed = await showAccuracyWarning(info.accuracy);
+                if (!confirmed) return;
+            }
+
+            activeDownloads.add(modelName);
+
+            btnElement.disabled = true;
+            btnElement.querySelector('.btn-icon').classList.add('hidden');
+            btnElement.querySelector('.progress-icon').classList.remove('hidden');
+            btnElement.querySelector('.progress-text').classList.remove('hidden');
+
+            const progressCircle = btnElement.querySelector('.progress-circle');
+            const progressText = btnElement.querySelector('.progress-text');
+
+            const eventSource = new EventSource(`${API_URL}/download_cloud_model_stream?model_name=${encodeURIComponent(modelName)}`);
+
+            eventSource.onmessage = async function(event) {
+                const data = event.data;
+
+                if (data === "DONE") {
+                    eventSource.close();
+                    log(`Downloaded and activated ${modelName}`);
+                    activeDownloads.delete(modelName);
+
+                    try {
+                        const res = await fetch(`${API_URL}/engine_state`);
+                        const stateData = await res.json();
+                        loadedModelsMemory = stateData.loaded_models || [];
+                        loadedModelsInfo = stateData.loaded_models_info || {};
+                    } catch(e) {}
+
+                    disabledModels.delete(modelName);
+                    saveSettings();
+                    addModelToActiveUI(modelName, selectedMode);
+
+                    const parentDiv = btnElement.parentElement;
+                    parentDiv.innerHTML = `<div class="flex items-center gap-3">
+                           <span class="text-emerald-400 text-xs font-bold uppercase tracking-wide flex items-center gap-1"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> Installed</span>
+                           <button onclick="removeModel('${modelName}', this)" class="relative flex items-center justify-center p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 transition group" title="Delete Model Completely">
+                               <svg class="w-4 h-4 group-hover:scale-110 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                           </button>
+                       </div>`;
+
+                    const containerDiv = parentDiv.parentElement;
+                    containerDiv.classList.remove("bg-white/5", "border-white/10", "hover:border-blue-500/50");
+                    containerDiv.classList.add("bg-slate-800/80", "border-slate-700", "opacity-60");
+
+                    document.getElementById('noModelsAlert').classList.add('hidden');
+                } else if (data.startsWith("ERROR:")) {
+                    eventSource.close();
+                    alert(data.substring(6));
+                    activeDownloads.delete(modelName);
+                    resetBtn();
+                } else {
+                    const percent = parseInt(data);
+                    progressCircle.style.strokeDashoffset = 100 - percent;
+                    progressText.innerText = `${percent}%`;
+                }
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                alert("Connection lost during download.");
+                activeDownloads.delete(modelName);
+                resetBtn();
+            };
+
+            function resetBtn() {
+                btnElement.disabled = false;
+                btnElement.querySelector('.btn-icon').classList.remove('hidden');
+                btnElement.querySelector('.progress-icon').classList.add('hidden');
+                btnElement.querySelector('.progress-text').classList.add('hidden');
+                progressCircle.style.strokeDashoffset = 100;
+                progressText.innerText = "0%";
+            }
+        }
+
+        async function uploadLocalModel(input, mode) {
+            if (!input.files[0]) return;
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const btnRgb = document.getElementById('btnLoadRgb');
+            const btnXray = document.getElementById('btnLoadXray');
+            const clickedBtn = mode === 'rgb' ? btnRgb : btnXray;
+
+            const btnText = clickedBtn.querySelector('.btn-text');
+            const btnSpinner = clickedBtn.querySelector('.btn-spinner');
+
+            if (btnRgb) btnRgb.classList.add('opacity-50', 'pointer-events-none');
+            if (btnXray) btnXray.classList.add('opacity-50', 'pointer-events-none');
+
+            if (btnText) btnText.classList.add('hidden');
+            if (btnSpinner) btnSpinner.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_URL}/load_model`, { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (data.status === "success" || (data.message && data.message.includes("already loaded"))) {
+                    let customCats = JSON.parse(localStorage.getItem('smiloai_custom_categories')) || {};
+                    customCats[file.name] = mode;
+                    localStorage.setItem('smiloai_custom_categories', JSON.stringify(customCats));
+
+                    disabledModels.delete(file.name);
+                    saveSettings();
+                    await checkEngineState();
+                } else {
+                    alert(`Error: ${data.message}`);
+                }
+            } catch (e) {
+                log("Error connecting to Engine.");
+                alert("Failed to connect to Engine to load the model.");
+            } finally {
+                if (btnRgb) btnRgb.classList.remove('opacity-50', 'pointer-events-none');
+                if (btnXray) btnXray.classList.remove('opacity-50', 'pointer-events-none');
+
+                if (btnText) btnText.classList.remove('hidden');
+                if (btnSpinner) btnSpinner.classList.add('hidden');
+
+                input.value = "";
+            }
+        }
+
+        function toggleModelActiveState(name, isChecked) {
+            if (isChecked) disabledModels.delete(name);
+            else disabledModels.add(name);
+
+            saveSettings();
+        }
+
+        function addModelToActiveUI(name, mode) {
+            const listId = mode === 'rgb' ? 'rgbModelList' : 'xrayModelList';
+            const list = document.getElementById(listId);
+            const activeColor = mode === 'rgb' ? 'blue' : 'purple';
+
+            if(list.innerText.includes("No")) list.innerHTML = "";
+            if(list.innerHTML.includes(`data-name="${name}"`)) return;
+
+            const info = parseModelInfo(name);
+
+            const classes = loadedModelsInfo[name] ? loadedModelsInfo[name].join(', ') : "Fetching...";
+            const isChecked = disabledModels.has(name) ? '' : 'checked';
+
+            const item = document.createElement('div');
+            item.className = "flex justify-between items-center bg-black/20 rounded-lg pl-3 pr-2 py-2 border border-white/5 mt-2 transition-all";
+
+            item.innerHTML = `
+                <div class="flex items-center overflow-hidden w-full">
+                    <label class="relative inline-flex items-center cursor-pointer mr-3 shrink-0">
+                        <input type="checkbox" ${isChecked} class="model-checkbox sr-only peer" data-name="${name}" onchange="toggleModelActiveState('${name}', this.checked)">
+                        <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-${activeColor}-500"></div>
+                    </label>
+                    <div class="flex flex-col truncate w-full">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-white truncate" title="${name}">${info.displayName} MODEL</span>
+                            ${info.accuracy ? `<span class="text-[9px] text-gray-400 font-mono tracking-widest shrink-0">${info.accuracy}% ACC</span>` : ''}
+                        </div>
+                        <span class="text-[10px] text-emerald-400/80 font-mono tracking-wide mt-0.5 truncate" title="Detects: ${classes}">Detects: ${classes}</span>
+                    </div>
+                </div>
+                <button onclick="removeModel('${name}', this)" class="text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded transition hover:bg-red-500/20 shrink-0 ml-2">✕</button>
+            `;
+            list.appendChild(item);
+        }
+
+        async function removeModel(name, btnElement) {
+            if (btnElement) {
+                btnElement.disabled = true;
+                btnElement.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                btnElement.innerHTML = `<svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            }
+
+            const formData = new FormData();
+            formData.append("model_name", name);
+            try {
+                await fetch(`${API_URL}/remove_model`, { method: "POST", body: formData });
+                disabledModels.delete(name);
+                saveSettings();
+                await checkEngineState();
+            } catch (e) {
+                log("Failed to remove.");
+                if (btnElement) {
+                    btnElement.disabled = false;
+                    btnElement.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                    btnElement.innerHTML = `✕`;
+                }
+            }
+        }
+
+        // Inference Pipeline Execution
+        function startAiSummaryStream(detections, mode) {
+            const section = document.getElementById('aiSummarySection');
+            const loader = document.getElementById('aiShinyLoader');
+            const textEl = document.getElementById('aiSummaryText');
+
+            section.classList.remove('hidden');
+            loader.classList.remove('hidden');
+            textEl.classList.add('hidden');
+            textEl.innerHTML = '';
+
+            const eventSource = new EventSource(`${API_URL}/generate_ai_summary_stream?detections=${encodeURIComponent(detections)}&mode=${encodeURIComponent(mode)}`);
+
+            eventSource.onmessage = function(event) {
+                if (event.data === "[DONE]") {
+                    eventSource.close();
+                } else if (event.data.startsWith("[ERROR]")) {
+                    eventSource.close();
+                    loader.classList.add('hidden');
+                    textEl.classList.remove('hidden');
+                    textEl.innerHTML = `<span class="text-red-400">${event.data.replace("[ERROR] ", "")}</span>`;
+                } else {
+                    if (!loader.classList.contains('hidden')) {
+                        loader.classList.add('hidden');
+                        textEl.classList.remove('hidden');
+                    }
+                    textEl.innerHTML += event.data;
+                }
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                loader.classList.add('hidden');
+                textEl.classList.remove('hidden');
+                textEl.innerHTML += `<br><br><span class="text-red-400 font-bold">Connection to AI Assistant lost.</span>`;
+            };
+        }
+
+        async function runInference() {
+            if (!isBatchMode && !imageFile) return alert("Please upload a patient scan first.");
+            if (isBatchMode && batchFiles.length === 0) return alert("Please upload files for batch processing.");
+
+            const pipelineMode = document.querySelector('input[name="pipelineMode"]:checked').value;
+
+            // Extract Auto-Pilot configuration
+            const apEnabled = document.getElementById('autoPilotToggle').checked;
+            const apModel = document.getElementById('autoPilotModelSelect').value;
+            const isAutoPilotActive = (pipelineMode === "custom" && apEnabled && apModel !== "");
+
+            let activeModels = "";
+            let activeCategory = "xray";
+            lastScanModelsInfo = [];
+
+            if (pipelineMode === "sequential") {
+                const rgbActive = document.getElementById('rgbMasterToggle').checked;
+                const xrayActive = document.getElementById('xrayMasterToggle').checked;
+
+                if (!rgbActive && !xrayActive) {
+                    toggleSettings();
+                    return alert("Please configure the Engine Settings and enable a scan mode.");
+                }
+
+                activeCategory = rgbActive ? 'rgb' : 'xray';
+                const listId = activeCategory === 'rgb' ? 'rgbModelList' : 'xrayModelList';
+
+                const listElements = document.getElementById(listId).querySelectorAll('.model-checkbox:checked');
+                activeModels = Array.from(listElements).map(el => {
+                    const modelName = el.getAttribute('data-name');
+                    lastScanModelsInfo.push(parseModelInfo(modelName));
+                    return modelName;
+                }).join(',');
+
+                if (!activeModels) {
+                    toggleSettings();
+                    return alert(`No active models selected in the settings. Please toggle at least one model ON.`);
+                }
+            } else {
+                if (apEnabled && !apModel) {
+                    toggleSettings();
+                    return alert("Auto-Pilot is enabled but no routing model is selected. Please open the settings and select a model from the dropdown.");
+                }
+
+                if (!isAutoPilotActive) {
+                    // Validate manual custom flow
+                    if (flowNodes.length === 0) {
+                        toggleSettings();
+                        return alert("Your Custom Flow graph is empty. Please open the Builder first.");
+                    }
+                    const startNode = flowNodes.find(n => n.type === 'start');
+                    if(!startNode) return alert("Custom Flow needs a Start Node.");
+
+                    for (let node of flowNodes) {
+                        if (node.type === 'model' && !loadedModelsMemory.includes(node.modelName)) {
+                            toggleSettings();
+                            return alert(`Cannot initiate sequence. Your Custom Flow contains a missing model: ${node.modelName}.`);
+                        }
+                        if (node.type === 'model') {
+                            const info = parseModelInfo(node.modelName);
+                            activeCategory = info.category;
+                            lastScanModelsInfo.push(info);
+                        }
+                    }
+                } else {
+                    // Execute Auto-Pilot routing bypass
+                    activeCategory = "auto";
+                    const accuracyMatch = apModel.match(/_(\d+)_/);
+                    lastScanModelsInfo = [{
+                        displayName: "Auto-Pilot Smart Router",
+                        category: "auto",
+                        accuracy: accuracyMatch ? accuracyMatch[1] : "N/A"
+                    }];
+                }
+            }
+
+            lastScanModelsInfo = lastScanModelsInfo.filter((v,i,a)=>a.findIndex(v2=>(v2.displayName===v.displayName))===i);
+
+            const aiEnabled = document.getElementById('aiAssistantToggle').checked;
+
+            if (isBatchMode) {
+                const skipWarning = localStorage.getItem('smiloai_skip_batch_warning') === 'true';
+
+                if (aiEnabled && !skipWarning) {
+                    showBatchWarning();
+                } else {
+                    executeBatchInference(aiEnabled);
+                }
+            } else {
+                executeSingleInference(activeModels, activeCategory, pipelineMode, aiEnabled, apEnabled, apModel);
+            }
+        }
+
+        async function executeSingleInference(activeModels, activeCategory, pipelineMode, aiEnabled, apEnabled, apModel) {
+            const settingsBtn = document.getElementById('settingsGearBtn');
+            const initiateBtn = document.getElementById('btnInitiateSequence');
+            if (settingsBtn) settingsBtn.disabled = true;
+            if (initiateBtn) initiateBtn.disabled = true;
+
+            const overlay = document.getElementById('loadingOverlay');
+            document.getElementById('scanSummaryContainer').classList.add('hidden');
+            document.getElementById('aiSummarySection').classList.add('hidden');
+            document.getElementById('btnExportPDF').classList.add('hidden');
+            document.getElementById('btnTrainAutoPilot').classList.add('hidden');
+
+            // Reset routing metadata
+            document.getElementById('scanTime').removeAttribute('data-routed');
+
+            document.getElementById('loadingMainText').innerText = "PROCESSING SCAN...";
+            document.getElementById('loadingSubText').classList.add('hidden');
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+
+            const formData = new FormData();
+            formData.append("image", imageFile);
+            formData.append("conf_threshold", document.getElementById('confSlider').value);
+            formData.append("active_models", activeModels);
+            formData.append("mode", activeCategory);
+            formData.append("pipeline_mode", pipelineMode);
+
+            // Dispatch graph state to backend
+            if (pipelineMode === "custom") {
+                const liveGraph = JSON.stringify({ nodes: flowNodes, edges: flowEdges });
+                formData.append("flow_graph", liveGraph);
+                localStorage.setItem('smiloai_flow', liveGraph);
+
+                if (apEnabled && apModel) {
+                    formData.append("autopilot_model", apModel);
+                    formData.append("all_presets", JSON.stringify(flowPresets));
+                } else {
+                    formData.append("autopilot_model", "");
+                    formData.append("all_presets", "{}");
+                }
+            } else {
+                formData.append("flow_graph", "{}");
+                formData.append("autopilot_model", "");
+                formData.append("all_presets", "{}");
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/run_inference`, { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (data.status === "success") {
+                    document.getElementById('mainDisplay').src = data.image_base64;
+                    document.getElementById('btnExportPDF').classList.remove('hidden');
+
+                    // Conditionally display data collection UI
+                    if (document.getElementById('dataCollectionToggle').checked) {
+                        const trainBtn = document.getElementById('btnTrainAutoPilot');
+                        trainBtn.classList.remove('hidden');
+                        trainBtn.innerHTML = `
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            ADD TO AUTO-PILOT
+                        `;
+                    }
+
+                    const summaryContainer = document.getElementById('scanSummaryContainer');
+                    const summaryList = document.getElementById('scanSummaryList');
+
+                    // Update UI with auto-routed flow
+                    if (data.routed_flow) {
+                        document.getElementById('scanTime').innerHTML = `${data.time_taken}s <span class="ml-3 text-[10px] text-purple-300 font-bold px-2 py-0.5 bg-purple-500/20 rounded border border-purple-500/30 tracking-wider">[Auto-Routed: ${data.routed_flow}]</span>`;
+                        document.getElementById('scanTime').setAttribute('data-routed', data.routed_flow);
+                    } else {
+                        document.getElementById('scanTime').innerText = `${data.time_taken}s`;
+                    }
+
+                    summaryList.innerHTML = '';
+
+                    if (data.summary && Object.keys(data.summary).length > 0) {
+                        let detectionArray = [];
+                        for (const [label, count] of Object.entries(data.summary)) {
+                            detectionArray.push(`${count} ${label}`);
+                            summaryList.innerHTML += `
+                                <div class="bg-white/5 rounded-xl p-3 border border-white/10 flex flex-col items-center justify-center text-center shadow-inner">
+                                    <span class="text-3xl font-bold text-white mb-1 drop-shadow-md">${count}</span>
+                                    <span class="text-[10px] text-emerald-400 uppercase tracking-widest font-semibold">${label}</span>
+                                </div>`;
+                        }
+
+                        summaryContainer.classList.remove('hidden');
+
+                        if (aiEnabled) {
+                            startAiSummaryStream(detectionArray.join(', '), activeCategory);
+                        }
+                    } else {
+                        summaryList.innerHTML = `<div class="col-span-full text-center text-emerald-300 font-medium py-4">Scan Clear: No anomalies detected at current threshold.</div>`;
+                        summaryContainer.classList.remove('hidden');
+
+                        if (aiEnabled) {
+                            startAiSummaryStream("No anomalies detected. The scan is completely healthy.", activeCategory);
+                        }
+                    }
+                }
+            } catch (e) {
+                alert("Analysis failed. Engine disconnected.");
+            } finally {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+
+                if (settingsBtn) settingsBtn.disabled = false;
+                if (initiateBtn) initiateBtn.disabled = false;
+            }
+        }
+
+        async function executeBatchInference(useLLM) {
+            const settingsBtn = document.getElementById('settingsGearBtn');
+            const initiateBtn = document.getElementById('btnInitiateSequence');
+            if (settingsBtn) settingsBtn.disabled = true;
+            if (initiateBtn) initiateBtn.disabled = true;
+
+            batchResults = [];
+            const overlay = document.getElementById('loadingOverlay');
+            const mainText = document.getElementById('loadingMainText');
+            const subText = document.getElementById('loadingSubText');
+
+            document.getElementById('imagePlaceholder').classList.add('hidden');
+            document.getElementById('btnTrainAutoPilot').classList.add('hidden');
+
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+            subText.classList.remove('hidden');
+
+            const pipelineMode = document.querySelector('input[name="pipelineMode"]:checked').value;
+            const confThreshold = document.getElementById('confSlider').value;
+            const apEnabled = document.getElementById('autoPilotToggle').checked;
+            const apModel = document.getElementById('autoPilotModelSelect').value;
+            const isAutoPilotActive = (pipelineMode === "custom" && apEnabled && apModel !== "");
+
+            let activeModels = "";
+            let activeCategory = "xray";
+            if (pipelineMode === "sequential") {
+                const rgbActive = document.getElementById('rgbMasterToggle').checked;
+                activeCategory = rgbActive ? 'rgb' : 'xray';
+                const listId = activeCategory === 'rgb' ? 'rgbModelList' : 'xrayModelList';
+                activeModels = Array.from(document.getElementById(listId).querySelectorAll('.model-checkbox:checked')).map(el => el.getAttribute('data-name')).join(',');
+            } else {
+                if (!isAutoPilotActive) {
+                    for (let node of flowNodes) {
+                        if (node.type === 'model') {
+                            activeCategory = parseModelInfo(node.modelName).category;
+                            break;
+                        }
+                    }
+                } else {
+                    activeCategory = "auto";
+                }
+            }
+
+            const liveGraph = JSON.stringify({ nodes: flowNodes, edges: flowEdges });
+            if (pipelineMode === "custom") localStorage.setItem('smiloai_flow', liveGraph);
+
+            let startTime = Date.now();
+
+            for (let i = 0; i < batchFiles.length; i++) {
+                let file = batchFiles[i];
+                mainText.innerText = `PROCESSING SCAN ${i + 1} OF ${batchFiles.length}...`;
+
+                if (i > 0) {
+                    let elapsedMs = Date.now() - startTime;
+                    let avgMsPerImg = elapsedMs / i;
+                    let remainingMs = avgMsPerImg * (batchFiles.length - i);
+                    let remainingSecs = Math.ceil(remainingMs / 1000);
+                    let mins = Math.floor(remainingSecs / 60);
+                    let secs = remainingSecs % 60;
+                    subText.innerText = `EST TIME REMAINING: ${mins > 0 ? mins + 'm ' : ''}${secs}s`;
+                } else {
+                    subText.innerText = "EST TIME REMAINING: CALCULATING...";
+                }
+
+                const originalBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+
+                const formData = new FormData();
+                formData.append("image", file);
+                formData.append("conf_threshold", confThreshold);
+                formData.append("active_models", activeModels);
+                formData.append("mode", activeCategory);
+                formData.append("pipeline_mode", pipelineMode);
+
+                // Apply routing logic to batch pipeline
+                if (pipelineMode === "custom") {
+                    formData.append("flow_graph", liveGraph);
+                    if (apEnabled && apModel) {
+                        formData.append("autopilot_model", apModel);
+                        formData.append("all_presets", JSON.stringify(flowPresets));
+                    } else {
+                        formData.append("autopilot_model", "");
+                        formData.append("all_presets", "{}");
+                    }
+                } else {
+                    formData.append("flow_graph", "{}");
+                    formData.append("autopilot_model", "");
+                    formData.append("all_presets", "{}");
+                }
+
+                try {
+                    const res = await fetch(`${API_URL}/run_inference`, { method: "POST", body: formData });
+                    const data = await res.json();
+
+                    if (data.status === "success") {
+                        let aiFinalText = "";
+
+                        if (useLLM) {
+                            let detectionArray = [];
+                            if (data.summary && Object.keys(data.summary).length > 0) {
+                                for (const [label, count] of Object.entries(data.summary)) {
+                                    detectionArray.push(`${count} ${label}`);
+                                }
+                                aiFinalText = await fetchAiSummarySilently(detectionArray.join(', '), activeCategory);
+                            } else {
+                                aiFinalText = await fetchAiSummarySilently("No anomalies detected. The scan is completely healthy.", activeCategory);
+                            }
+                        }
+
+                        batchResults.push({
+                            filename: file.name,
+                            originalBase64: originalBase64,
+                            processedBase64: data.image_base64,
+                            summary: data.summary || {},
+                            aiText: aiFinalText,
+                            routedFlow: data.routed_flow // Store routed flow metadata
+                        });
+                    }
+                } catch (e) {
+                    console.error(`Failed on image ${file.name}:`, e);
+                }
+            }
+
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+
+            if (settingsBtn) settingsBtn.disabled = false;
+            if (initiateBtn) initiateBtn.disabled = false;
+
+            const placeholder = document.getElementById('imagePlaceholder');
+            placeholder.classList.remove('hidden');
+
+            if (batchResults.length > 0) {
+                placeholder.innerHTML = `
+                    <svg class="w-16 h-16 mx-auto mb-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span class="text-emerald-300 font-bold block text-xl mb-2">BATCH COMPLETE</span>
+                    <span class="text-gray-400 text-sm">Successfully processed ${batchResults.length} scans.</span>
+                `;
+
+                const exportBtn = document.getElementById('btnExportPDF');
+                exportBtn.classList.remove('hidden');
+                exportBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    DOWNLOAD BATCH REPORT
+                `;
+
+                if (document.getElementById('dataCollectionToggle').checked) {
+                    const trainBtn = document.getElementById('btnTrainAutoPilot');
+                    trainBtn.classList.remove('hidden');
+                    trainBtn.innerHTML = `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        ADD TO AUTO-PILOT
+                    `;
+                }
+
+                try {
+                    exportClinicalReport();
+                } catch(e) {
+                    console.log("Auto-download blocked by browser security.");
+                }
+            } else {
+                placeholder.innerHTML = `
+                    <svg class="w-16 h-16 mx-auto mb-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <span class="text-yellow-400 font-bold block text-xl mb-2">BATCH ABORTED</span>
+                    <span class="text-gray-400 text-sm">No results were generated.</span>
+                `;
+            }
+        }
+
+        async function fetchAiSummarySilently(detections, mode) {
+            return new Promise((resolve) => {
+                const eventSource = new EventSource(`${API_URL}/generate_ai_summary_stream?detections=${encodeURIComponent(detections)}&mode=${encodeURIComponent(mode)}`);
+                let fullText = "";
+                eventSource.onmessage = function(event) {
+                    if (event.data === "[DONE]") {
+                        eventSource.close();
+                        resolve(fullText);
+                    } else if (event.data.startsWith("[ERROR]")) {
+                        eventSource.close();
+                        resolve("Error generating AI plan: " + event.data.replace("[ERROR] ", ""));
+                    } else {
+                        fullText += event.data;
+                    }
+                };
+                eventSource.onerror = function() {
+                    eventSource.close();
+                    resolve(fullText || "Connection lost to AI Assistant.");
+                };
+            });
+        }
+
+        // Data Collection Pipeline
+        async function saveForAutoPilot() {
+            if (isBatchMode) {
+                openBatchTrainModal();
+                return;
+            }
+
+            if (!originalImageBase64) return alert("No original image found to save.");
+
+            // ✨ THE FIX: We use the new async modal instead of the old prompt
+            let flowLabel = await requireFlowLabelAsync();
+            if (!flowLabel) return;
+
+            const res = await fetch(originalImageBase64);
+            const blob = await res.blob();
+            const file = new File([blob], "training_image.jpg", { type: "image/jpeg" });
+
+            const formData = new FormData();
+            formData.append("image", file);
+            formData.append("label", flowLabel);
+
+            // UI Lockout
+            const btn = document.getElementById('btnTrainAutoPilot');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> SAVING...`;
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'pointer-events-none', 'grayscale');
+
+            try {
+                const response = await fetch(`${API_URL}/save_training_data`, { method: "POST", body: formData });
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    btn.classList.remove('grayscale');
+
+                    // Display updated dataset count
+                    btn.innerHTML = `Saved (Total: ${data.new_count})`;
+                    btn.classList.replace('text-purple-400', 'text-emerald-400');
+                    btn.classList.replace('bg-purple-500/10', 'bg-emerald-500/10');
+                    btn.classList.replace('border-purple-500/30', 'border-emerald-500/30');
+
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.classList.replace('text-emerald-400', 'text-purple-400');
+                        btn.classList.replace('bg-emerald-500/10', 'bg-purple-500/10');
+                        btn.classList.replace('border-emerald-500/30', 'border-purple-500/30');
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-50', 'pointer-events-none');
+                    }, 2500);
+                } else {
+                    alert("Failed to save: " + data.message);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to reach Python backend.");
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
+            }
+        }
+
+        // ✨ THE FIX: Replaced getActiveFlowLabel with requireFlowLabelAsync to handle the new Beautiful Modal
+        function requireFlowLabelAsync() {
+            return new Promise((resolve) => {
+                const pipelineMode = document.querySelector('input[name="pipelineMode"]:checked').value;
+                if (pipelineMode !== "custom") {
+                    const isRgb = document.getElementById('rgbMasterToggle').checked;
+                    resolve(isRgb ? "SEQUENTIAL_RGB" : "SEQUENTIAL_XRAY");
+                    return;
+                }
+
+                if (currentSelectedPreset) {
+                    resolve(currentSelectedPreset.replace(/[^a-zA-Z0-9]/g, '_'));
+                    return;
+                }
+
+                const modal = document.getElementById('unnamedFlowModal');
+                const box = document.getElementById('unnamedFlowBox');
+
+                const listEl = document.getElementById('unnamedFlowDropdownList');
+                listEl.innerHTML = '';
+                clearUnnamedFlowDropdown();
+
+                const keys = Object.keys(flowPresets);
+                if (keys.length === 0) {
+                    listEl.innerHTML = '<div class="px-4 py-3 text-xs text-gray-500 italic text-center">No presets available.</div>';
+                } else {
+                    keys.forEach(name => {
+                        listEl.innerHTML += `<button onclick="selectUnnamedFlowPreset('${name}')" class="w-full text-left px-4 py-3 hover:bg-blue-500/20 transition-colors border-l-2 border-transparent hover:border-blue-500 text-sm font-bold text-gray-200 hover:text-white truncate">${name}</button>`;
+                    });
+                }
+
+                document.getElementById('unnamedFlowInput').value = "";
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    box.classList.remove('scale-95');
+                }, 10);
+
+                const btnBack = document.getElementById('btnUnnamedFlowBack');
+                const btnContinue = document.getElementById('btnUnnamedFlowContinue');
+
+                const cleanup = () => {
+                    modal.classList.add('opacity-0');
+                    box.classList.add('scale-95');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
+                    }, 300);
+                    btnBack.removeEventListener('click', onCancel);
+                    btnContinue.removeEventListener('click', onConfirm);
+                };
+
+                const onCancel = () => { cleanup(); resolve(null); };
+                const onConfirm = () => {
+                    let selected = document.getElementById('unnamedFlowSelectValue').value;
+                    let typed = document.getElementById('unnamedFlowInput').value.trim();
+                    let finalName = typed || selected;
+
+                    if (!finalName) {
+                        alert("Please select an existing preset or type a new name.");
+                        return;
+                    }
+
+                    // Auto-save the canvas state to the selected/new preset so they don't lose work!
+                    flowPresets[finalName] = {
+                        nodes: JSON.parse(JSON.stringify(flowNodes)),
+                        edges: JSON.parse(JSON.stringify(flowEdges))
+                    };
+                    localStorage.setItem('smiloai_flow_presets', JSON.stringify(flowPresets));
+
+                    currentSelectedPreset = finalName;
+                    localStorage.setItem('smiloai_last_preset', finalName);
+                    document.getElementById('presetDropdownText').innerText = finalName;
+                    updatePresetDropdown();
+                    refreshCustomFlowDisplay();
+
+                    cleanup();
+                    resolve(finalName.replace(/[^a-zA-Z0-9]/g, '_'));
+                };
+
+                btnBack.addEventListener('click', onCancel);
+                btnContinue.addEventListener('click', onConfirm);
+            });
+        }
+
+        // Batch Training Modal Handlers
+        async function openBatchTrainModal() {
+            const grid = document.getElementById('batchTrainGrid');
+            grid.innerHTML = '';
+
+            // ✨ THE FIX: Update this call as well to use the new async modal
+            let flowLabel = await requireFlowLabelAsync();
+            if (!flowLabel) return;
+
+            document.getElementById('batchStatCategory').innerText = flowLabel;
+
+            // Retrieve current dataset counts
+            try {
+                const res = await fetch(`${API_URL}/get_training_counts`);
+                const counts = await res.json();
+                currentFlowBaseCount = counts[flowLabel] || 0;
+                document.getElementById('batchStatCurrent').innerText = currentFlowBaseCount;
+            } catch(e) {
+                currentFlowBaseCount = 0;
+                document.getElementById('batchStatCurrent').innerText = "0";
+            }
+
+            batchResults.forEach((res, index) => {
+                grid.innerHTML += `
+                    <label class="relative cursor-pointer group flex flex-col w-full rounded-xl overflow-hidden border-2 border-white/10 hover:border-purple-500/50 transition bg-black/20">
+                        <div class="relative w-full pt-[100%]">
+                            <img src="${res.originalBase64}" class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition">
+                            <div class="absolute top-2 right-2">
+                                <input type="checkbox" class="batch-train-cb sr-only peer" data-idx="${index}" onchange="updateBatchStats()">
+                                <div class="w-6 h-6 rounded-md bg-black/50 border border-white/30 peer-checked:bg-purple-500 peer-checked:border-purple-400 flex items-center justify-center transition-all shadow-lg backdrop-blur-sm">
+                                    <svg class="w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            });
+
+            updateBatchStats();
+
+            const modal = document.getElementById('batchTrainModal');
+            const box = document.getElementById('batchTrainBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function updateBatchStats() {
+            // Calculate aggregate dataset count
+            const selectedCount = document.querySelectorAll('.batch-train-cb:checked').length;
+            document.getElementById('batchStatAdding').innerText = `+${selectedCount}`;
+            document.getElementById('batchStatTotal').innerText = currentFlowBaseCount + selectedCount;
+        }
+
+        function closeBatchTrainModal() {
+            const modal = document.getElementById('batchTrainModal');
+            const box = document.getElementById('batchTrainBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function toggleAllBatchTrain(forceCheck) {
+            const checkboxes = document.querySelectorAll('.batch-train-cb');
+            checkboxes.forEach(cb => cb.checked = forceCheck);
+            updateBatchStats();
+        }
+
+        async function confirmBatchTrain() {
+            const checkboxes = document.querySelectorAll('.batch-train-cb:checked');
+            if (checkboxes.length === 0) return alert("Please select at least one image to use for training.");
+
+            let flowLabel = getActiveFlowLabel();
+            if (!flowLabel) return;
+
+            // UI Lockout
+            const btnBatchSave = document.getElementById('btnBatchTrainSave');
+            const originalHTML = btnBatchSave.innerHTML;
+            btnBatchSave.disabled = true;
+            btnBatchSave.classList.add('opacity-50', 'cursor-not-allowed', 'grayscale');
+
+            let successCount = 0;
+
+            for (let i = 0; i < checkboxes.length; i++) {
+                const idx = checkboxes[i].getAttribute('data-idx');
+                const res = batchResults[idx];
+
+                btnBatchSave.innerHTML = `<svg class="animate-spin inline h-4 w-4 mr-2 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> SAVING ${i+1}/${checkboxes.length}...`;
+
+                const fetched = await fetch(res.originalBase64);
+                const blob = await fetched.blob();
+                const file = new File([blob], `batch_img_${idx}.jpg`, { type: "image/jpeg" });
+
+                const formData = new FormData();
+                formData.append("image", file);
+                formData.append("label", flowLabel);
+
+                try {
+                    const response = await fetch(`${API_URL}/save_training_data`, { method: "POST", body: formData });
+                    if (response.ok) successCount++;
+                } catch (e) {
+                    console.error("Batch save error", e);
+                }
+            }
+
+            btnBatchSave.classList.remove('grayscale');
+            btnBatchSave.innerHTML = `Save Successful (${successCount})`;
+            btnBatchSave.classList.replace('bg-purple-400', 'bg-emerald-400');
+            btnBatchSave.classList.replace('hover:bg-purple-300', 'hover:bg-emerald-300');
+            btnBatchSave.classList.replace('shadow-purple-500/30', 'shadow-emerald-500/30');
+
+            setTimeout(() => {
+                closeBatchTrainModal();
+                btnBatchSave.innerHTML = originalHTML;
+                btnBatchSave.classList.replace('bg-emerald-400', 'bg-purple-400');
+                btnBatchSave.classList.replace('hover:bg-emerald-300', 'hover:bg-purple-300');
+                btnBatchSave.classList.replace('shadow-emerald-500/30', 'shadow-purple-500/30');
+                btnBatchSave.disabled = false;
+                btnBatchSave.classList.remove('opacity-50', 'cursor-not-allowed');
+            }, 1500);
+        }
+
+    </script>
+</body>
+</html>
