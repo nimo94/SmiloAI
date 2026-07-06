@@ -57,3 +57,9 @@ Sourcecodes/AUTOPILOT/Training_Data/*
 !Sourcecodes/AUTOPILOT/Training_Data/.gitkeep
 Sourcecodes/AUTOPILOT/Training_Data_Balanced/*
 !Sourcecodes/AUTOPILOT/Training_Data_Balanced/.gitkeep
+
+# Cloud Specialist Models (Ignore downloaded models >100MB, keep base offline fallback model)
+Sourcecodes/model/*.onnx
+Sourcecodes/model/*.pt
+!Sourcecodes/model/CALCULUSMD_R_60.onnx
+!Sourcecodes/model/.gitkeep
