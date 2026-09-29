@@ -74,7 +74,7 @@ class AutoPilotTrainer(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("SmiloAi - Auto-Pilot Training Engine")
+        self.title("SmiloAI - Auto-Pilot Trainer")
         self.geometry("1000x720")
         self.minsize(800, 550)
         self.resizable(True, True)
@@ -459,7 +459,7 @@ class AutoPilotTrainer(ctk.CTk):
 
             self.metric_queue.put({"log": f"Initiating {target_epochs}-Epoch Deep Learning Sequence..."})
 
-            project_dir = os.path.abspath("SmiloAi_AutoPilot")
+            project_dir = os.path.abspath("SmiloAI_AutoPilot")
 
             # Start Training (This blocks until finished or stopped)
             model.train(
@@ -499,7 +499,7 @@ class AutoPilotTrainer(ctk.CTk):
                 print(
                     "[SAFE STOP TRACE] 5b. model.trainer.best is missing or invalid. Initiating recursive fallback scan...")
                 # Fallback Recursive Search
-                search_dirs = [os.path.abspath("runs"), os.path.abspath("SmiloAi_AutoPilot")]
+                search_dirs = [os.path.abspath("runs"), os.path.abspath("SmiloAI_AutoPilot")]
                 newest_pt = None
                 newest_time = 0
                 for sdir in search_dirs:

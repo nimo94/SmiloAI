@@ -1,4 +1,5 @@
 import sys
+from typing import List, Dict
 import os
 
 # Redirect stdout/stderr to prevent application crash during headless execution
@@ -46,7 +47,16 @@ import webbrowser
 import threading
 from contextlib import asynccontextmanager
 from PIL import Image, ImageDraw, ImageFont
+import qrcode
+import socket
+import io
+from fastapi.responses import HTMLResponse
+import secrets
 
+# Generate a secure session token to lock down the local web server
+SESSION_TOKEN = secrets.token_urlsafe(32)
+with open(".token", "w") as f:
+    f.write(SESSION_TOKEN)
 # PyInstaller native splash screen module
 try:
     import pyi_splash
@@ -55,10 +65,8 @@ except ImportError:
 
 try:
     import requests
-    import dropbox
-    from groq import Groq
 except ImportError:
-    print("WARNING: Missing libraries. Run 'pip install requests dropbox groq' to enable Cloud & AI features.")
+    print("WARNING: Missing libraries. Run 'pip install requests' to enable Cloud & AI features.")
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
@@ -76,28 +84,10 @@ for _env_path in (os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env
             pass
 
 # Cloud and API configuration (Load from environment or fallback to safe placeholders)
-APP_KEY = os.getenv("DROPBOX_APP_KEY", "YOUR_DROPBOX_APP_KEY_HERE")
-APP_SECRET = os.getenv("DROPBOX_APP_SECRET", "YOUR_DROPBOX_APP_SECRET_HERE")
-REFRESH_TOKEN = os.getenv("DROPBOX_REFRESH_TOKEN", "YOUR_DROPBOX_REFRESH_TOKEN_HERE")
-DROPBOX_FOLDER_PATH = os.getenv("DROPBOX_FOLDER_PATH", "/home/Aswin Selvam/Apps/SmiloAI/MODELS")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "YOUR_GROQ_API_KEY_HERE")
+# Cloud Proxy Configuration
+PROXY_URL = os.getenv("PROXY_URL", "https://smiloai-cloud-proxy.onrender.com")
+PROXY_SECRET = os.getenv("PROXY_SECRET", "smiloai-secure-proxy-key-2024")
 
-
-def get_access_token_from_refresh_token(app_key, app_secret, refresh_token):
-    try:
-        auth_url = 'https://api.dropbox.com/oauth2/token'
-        auth_data = {
-            'refresh_token': refresh_token,
-            'grant_type': 'refresh_token',
-            'client_id': app_key,
-            'client_secret': app_secret,
-        }
-        response = requests.post(auth_url, data=auth_data, timeout=10)
-        response.raise_for_status()
-        return response.json().get('access_token')
-    except Exception as e:
-        print(f"Dropbox authentication failed: {e}")
-        return None
 
 
 # Model state and directories
@@ -142,15 +132,83 @@ def verify_authorized_request(request: Request, x_api_key: str = Header(None, al
 
 
 # Application lifespan manager
+import platform
+import shutil
+import webbrowser
+import threading
+
+def launch_app_mode(url: str):
+    system = platform.system()
+    browsers = []
+
+    if system == "Windows":
+        browsers = [
+            "chrome", "msedge", "opera",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        ]
+        user_data_dir = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "SmiloAI_AppProfile")
+    elif system == "Darwin":
+        browsers = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ]
+        user_data_dir = os.path.expanduser("~/Library/Application Support/SmiloAI_AppProfile")
+    else:
+        browsers = [
+            "google-chrome",
+            "google-chrome-stable",
+            "chromium-browser",
+            "chromium",
+            "microsoft-edge",
+            "opera"
+        ]
+        user_data_dir = os.path.expanduser("~/.config/SmiloAI_AppProfile")
+
+    for browser in browsers:
+        # Check if browser executable is available in PATH or exists at path
+        if shutil.which(browser) or os.path.exists(browser):
+            try:
+                cmd = [
+                    browser, 
+                    f"--app={url}", 
+                    "--window-size=1440,900",
+                    f"--user-data-dir={user_data_dir}",
+                    "--no-first-run",
+                    "--no-default-browser-check"
+                ]
+                if system == "Linux":
+                    cmd.append("--class=SmiloAI")
+                
+                process = subprocess.Popen(cmd)
+                print(f"Launched SmiloAI App Mode using: {browser}")
+                return process
+            except Exception as e:
+                pass
+                
+    print("Could not find Chrome/Edge for App Mode. Falling back to default browser.")
+    webbrowser.open(url)
+    return None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     def open_url():
+        if os.environ.get("NO_APP_MODE") == "1":
+            return
         time.sleep(1.0)
         if pyi_splash and pyi_splash.is_alive():
             pyi_splash.close()
 
-        print("Launching SmiloGui in the default browser...")
-        webbrowser.open("http://127.0.0.1:8000")
+        print("Launching SmiloGui Native App...")
+        process = launch_app_mode(f"http://127.0.0.1:8000/?token={SESSION_TOKEN}")
+        if process:
+            print("Monitoring app window. Close window to shutdown server.")
+            process.wait()
+            print("App window closed. Shutting down SmiloAI...")
+            import signal
+            os.kill(os.getpid(), signal.SIGINT)
 
     threading.Thread(target=open_url, daemon=True).start()
 
@@ -193,7 +251,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="SmiloAi Engine", version="5.0", lifespan=lifespan)
+app = FastAPI(title="SmiloAI", version="5.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -203,13 +261,38 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3000",
         "http://127.0.0.1:5000",
-        "http://localhost:5000",
-        "null"
+        "http://localhost:5000"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    # Public assets that don't need authentication
+    if request.url.path in ["/logo.png", "/favicon.ico", "/manifest.json"]:
+        return await call_next(request)
+        
+    token = request.query_params.get("token")
+    cookie_token = request.cookies.get("smiloai_session")
+    
+    is_valid = False
+    if token == SESSION_TOKEN:
+        is_valid = True
+    elif cookie_token == SESSION_TOKEN:
+        is_valid = True
+        
+    if not is_valid:
+        return JSONResponse(status_code=403, content={"detail": "Direct browser access is disabled for security. Please use the SmiloAI Desktop Application."})
+        
+    response = await call_next(request)
+    
+    # Implicitly log them in via cookie if they authenticated with URL token
+    if token == SESSION_TOKEN and cookie_token != SESSION_TOKEN:
+        response.set_cookie(key="smiloai_session", value=SESSION_TOKEN, httponly=True, samesite="Lax")
+        
+    return response
 
 
 def get_resource_path(relative_path):
@@ -228,6 +311,30 @@ async def serve_ui():
     return JSONResponse({"status": "error", "message": "UI file not found in executable."})
 
 
+@app.get("/manifest.json")
+async def get_manifest():
+    return JSONResponse(content={
+        "name": "SmiloAI",
+        "short_name": "SmiloAI",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0f172a",
+        "theme_color": "#0f172a",
+        "icons": [
+            {
+                "src": "/logo.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": "/logo.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+    })
+
+
 @app.get("/logo.png")
 async def serve_logo():
     logo_path = get_resource_path("logo.png")
@@ -244,32 +351,41 @@ async def favicon():
 @app.get("/generate_ai_summary_stream")
 async def generate_ai_summary_stream(detections: str, mode: str = "xray"):
     def event_stream():
-        if not GROQ_API_KEY or "YOUR_GROQ_API_KEY" in GROQ_API_KEY:
-            yield "data: [ERROR] Valid GROQ_API_KEY required for AI Clinical Assistant.\n\n"
+        if not PROXY_URL:
+            yield "data: [ERROR] Proxy URL is not configured.\n\n"
             return
 
         try:
-            client = Groq(api_key=GROQ_API_KEY)
             scan_context = "an intraoral RGB photograph of a patient's teeth and gums" if mode == "rgb" else "a patient's dental X-Ray"
 
             prompt = (
-                f"You are SmiloAi, a highly advanced clinical dental assistant. The vision engine just scanned {scan_context} "
+                f"You are SmiloAI, a highly advanced clinical dental assistant. The vision engine just scanned {scan_context} "
                 f"and detected the following issues: {detections}. "
                 f"Write a short, highly professional, but reassuring paragraph (3-4 sentences max) explaining what this means "
                 f"and what the standard clinical procedure (like drilling and filling for caries, scaling for calculus, etc.) will be in the clinic. "
                 f"Do not use markdown formatting (* or #), just plain readable text."
             )
 
-            stream = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
-                messages=[{"role": "user", "content": prompt}],
-                stream=True,
-            )
+            proxy_endpoint = f"{PROXY_URL.rstrip('/')}/api/llm/stream"
+            headers = {"X-Proxy-Secret": PROXY_SECRET, "Content-Type": "application/json"}
+            payload = {
+                "model": "openai/gpt-oss-20b",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.5,
+                "max_tokens": 1024
+            }
 
-            for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
-                    text = chunk.choices[0].delta.content.replace('\n', '<br>')
-                    yield f"data: {text}\n\n"
+            with requests.post(proxy_endpoint, headers=headers, json=payload, stream=True) as response:
+                if response.status_code != 200:
+                    yield f"data: [ERROR] Cloud Proxy failed: {response.text}\n\n"
+                    return
+                
+                for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+                    if chunk:
+                        clean_chunk = chunk.replace('\n', '<br>')
+                        yield f"data: {clean_chunk}\n\n"
 
             yield "data: [DONE]\n\n"
 
@@ -334,18 +450,21 @@ async def get_engine_state():
 
     available_models = []
     try:
-        if DROPBOX_FOLDER_PATH != "":
-            access_token = get_access_token_from_refresh_token(APP_KEY, APP_SECRET, REFRESH_TOKEN)
-            if access_token:
-                dbx = dropbox.Dropbox(access_token)
-                search_path = DROPBOX_FOLDER_PATH.rstrip('/')
-                result = dbx.files_list_folder(search_path)
-                for entry in result.entries:
-                    if isinstance(entry, dropbox.files.FileMetadata):
-                        if entry.name.endswith(".pt") or entry.name.endswith(".onnx"):
-                            available_models.append(entry.name)
-    except Exception:
-        pass
+        if PROXY_URL:
+            proxy_endpoint = f"{PROXY_URL.rstrip('/')}/api/models/sync"
+            headers = {"X-Proxy-Secret": PROXY_SECRET}
+            print("Connecting to SmiloAI Cloud Proxy for federated updates...")
+            response = requests.get(proxy_endpoint, headers=headers)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "success":
+                    remote_models = data.get("models", [])
+                    for model_info in remote_models:
+                        clean_name = model_info["name"].replace(" ", "_")
+                        available_models.append(clean_name)
+    except Exception as e:
+        print(f"Failed to synchronize federated models via proxy: {e}")
 
     loaded_models_info = {}
     for name, model in models.items():
@@ -506,29 +625,50 @@ async def download_cloud_model_stream(model_name: str):
             yield f"data: ERROR:Model already loaded.\n\n"
             return
         try:
-            access_token = get_access_token_from_refresh_token(APP_KEY, APP_SECRET, REFRESH_TOKEN)
-            if not access_token:
-                yield f"data: ERROR:Authentication failed.\n\n"
-                return
-            dbx = dropbox.Dropbox(access_token)
-            dbx_path = f"{DROPBOX_FOLDER_PATH.rstrip('/')}/{clean_name}"
-            link_result = dbx.files_get_temporary_link(dbx_path)
-            total_size = link_result.metadata.size
-            with requests.get(link_result.link, stream=True, timeout=15) as r:
-                r.raise_for_status()
-                downloaded = 0
-                with open(file_path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=1024 * 256):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            if total_size > 0:
-                                progress = int((downloaded / total_size) * 100)
-                                yield f"data: {progress}\n\n"
-            yield f"data: 100\n\n"
-            models[model_name] = YOLO(file_path)
-            model_colors[model_name] = random.choice(MODERN_COLORS)
-            yield f"data: DONE\n\n"
+            if PROXY_URL:
+                proxy_endpoint = f"{PROXY_URL.rstrip('/')}/api/models/sync"
+                headers = {"X-Proxy-Secret": PROXY_SECRET}
+                response = requests.get(proxy_endpoint, headers=headers, timeout=10)
+                
+                if response.status_code != 200:
+                    yield f"data: ERROR:Failed to contact cloud databanks.\n\n"
+                    return
+                
+                data = response.json()
+                remote_models = data.get("models", [])
+                
+                target_url = None
+                total_size = 0
+                for model_info in remote_models:
+                    if model_info["name"].replace(" ", "_") == clean_name:
+                        target_url = model_info["url"]
+                        total_size = model_info["size"]
+                        break
+                        
+                if not target_url:
+                    yield f"data: ERROR:Model '{clean_name}' not found in cloud databanks.\n\n"
+                    return
+                    
+                with requests.get(target_url, stream=True, timeout=15) as r:
+                    r.raise_for_status()
+                    downloaded = 0
+                    with open(file_path, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=1024 * 256):
+                            if chunk:
+                                f.write(chunk)
+                                downloaded += len(chunk)
+                                if total_size > 0:
+                                    progress = int((downloaded / total_size) * 100)
+                                    yield f"data: {progress}\n\n"
+                                else:
+                                    yield f"data: 50\n\n"
+                
+                yield f"data: 100\n\n"
+                models[model_name] = YOLO(file_path)
+                model_colors[model_name] = random.choice(MODERN_COLORS)
+                yield f"data: DONE\n\n"
+            else:
+                yield f"data: ERROR:Cloud Proxy URL not configured.\n\n"
         except Exception as e:
             yield f"data: ERROR:{str(e)}\n\n"
 
@@ -536,7 +676,7 @@ async def download_cloud_model_stream(model_name: str):
 
 
 @app.post("/save_training_data")
-async def save_training_data(image: UploadFile = File(...), label: str = Form(...)):
+async def save_training_data(image: UploadFile = File(...), label: str = Form(...), _auth: None = Depends(verify_authorized_request)):
     try:
         safe_label = "".join([c for c in label if c.isalnum() or c in ['_', '-']]).strip()
         if not safe_label:
@@ -573,7 +713,7 @@ async def save_training_data(image: UploadFile = File(...), label: str = Form(..
 
 
 @app.post("/load_model")
-async def load_model(file: UploadFile = File(...)):
+async def load_model(file: UploadFile = File(...), _auth: None = Depends(verify_authorized_request)):
     try:
         file_path, model_name = safe_model_path(file.filename)
         if model_name in models:
@@ -588,7 +728,7 @@ async def load_model(file: UploadFile = File(...)):
 
 
 @app.post("/remove_model")
-async def remove_model(model_name: str = Form(...)):
+async def remove_model(model_name: str = Form(...), _auth: None = Depends(verify_authorized_request)):
     try:
         file_path, clean_name = safe_model_path(model_name)
     except ValueError as e:
@@ -657,6 +797,144 @@ async def shutdown_server(kill_trainer: str = "false", _auth: None = Depends(ver
     return {"status": "success", "message": "System shutting down."}
 
 
+def process_dental_positions(preds):
+    if len(preds) < 2:
+        return preds
+        
+    try:
+        centers = []
+        heights = []
+        areas = []
+        for p in preds:
+            box = p["box"]
+            cx = (box[0] + box[2]) / 2.0
+            cy = (box[1] + box[3]) / 2.0
+            h = box[3] - box[1]
+            a = (box[2] - box[0]) * h
+            centers.append([cx, cy])
+            heights.append(h)
+            areas.append(a)
+            
+        centers = np.array(centers)
+        
+        # Instead of PCA (which fails diagonally on asymmetric missing teeth), 
+        # we determine orientation from the aspect ratio of the teeth.
+        # Teeth are typically taller than they are wide.
+        avg_w = np.mean([p["box"][2] - p["box"][0] for p in preds])
+        avg_h = np.mean([p["box"][3] - p["box"][1] for p in preds])
+        
+        if avg_w > avg_h * 1.1:
+            # Rotated 90 degrees
+            primary_axis = np.array([0.0, 1.0])
+            secondary_axis = np.array([-1.0, 0.0])
+        else:
+            # Upright
+            primary_axis = np.array([1.0, 0.0])
+            secondary_axis = np.array([0.0, 1.0])
+            
+        mean = np.mean(centers, axis=0)
+        centered = centers - mean
+            
+        avg_height = np.mean(heights)
+        x_proj = centered.dot(primary_axis)
+        y_proj = centered.dot(secondary_axis)
+        
+        centrals = [i for i, p in enumerate(preds) if "Central Incisor" in p["label"]]
+        two_jaws = False
+        split_y = 0
+        
+        if len(centrals) >= 3:
+            two_jaws = True
+            sorted_c = sorted([y_proj[i] for i in centrals])
+            max_gap = 0
+            for i in range(len(sorted_c)-1):
+                gap = sorted_c[i+1] - sorted_c[i]
+                if gap > max_gap:
+                    max_gap = gap
+                    split_y = (sorted_c[i+1] + sorted_c[i]) / 2.0
+        elif len(centrals) == 2:
+            y_diff = abs(y_proj[centrals[0]] - y_proj[centrals[1]])
+            if y_diff > avg_height * 0.5:
+                two_jaws = True
+                split_y = (y_proj[centrals[0]] + y_proj[centrals[1]]) / 2.0
+        else:
+            median_x = np.median(x_proj)
+            center_teeth = [i for i in range(len(preds)) if abs(x_proj[i] - median_x) < avg_height * 1.5]
+            if len(center_teeth) >= 2:
+                y_center = [y_proj[i] for i in center_teeth]
+                if (np.max(y_center) - np.min(y_center)) > avg_height * 0.75:
+                    two_jaws = True
+                    split_y = (np.max(y_center) + np.min(y_center)) / 2.0
+                    
+        upper_indices = []
+        lower_indices = []
+        
+        if two_jaws:
+            group0 = np.where(y_proj > split_y)[0]
+            group1 = np.where(y_proj <= split_y)[0]
+            
+            if len(group0) > 0 and len(group1) > 0:
+                cy0 = np.mean([centers[i][1] for i in group0])
+                cy1 = np.mean([centers[i][1] for i in group1])
+                
+                # Image coordinates: smaller Y is higher on screen
+                if cy0 < cy1: 
+                    upper_indices = group0.tolist()
+                    lower_indices = group1.tolist()
+                else:
+                    upper_indices = group1.tolist()
+                    lower_indices = group0.tolist()
+            else:
+                upper_indices = list(range(len(preds)))
+        else:
+            is_lower = False
+            if centrals:
+                ratios = [ (preds[i]["box"][2]-preds[i]["box"][0]) / float(preds[i]["box"][3]-preds[i]["box"][1]) for i in centrals ]
+                if np.mean(ratios) < 0.78:
+                    is_lower = True
+                    
+            if is_lower:
+                lower_indices = list(range(len(preds)))
+            else:
+                upper_indices = list(range(len(preds)))
+            
+        x_proj = centered.dot(primary_axis)
+        if primary_axis[0] < 0:
+            x_proj = -x_proj
+            
+        def assign_left_right(indices, prefix):
+            if not indices: return
+            
+            sorted_idx = sorted(indices, key=lambda i: x_proj[i])
+            centrals = [i for i in sorted_idx if "Central Incisor" in preds[i]["label"]]
+            
+            midline_x = None
+            if len(centrals) >= 2:
+                midline_x = (x_proj[centrals[0]] + x_proj[centrals[-1]]) / 2.0
+            elif len(centrals) == 1:
+                c_idx = sorted_idx.index(centrals[0])
+                if c_idx > 0 and "Lateral" in preds[sorted_idx[c_idx-1]]["label"]:
+                    midline_x = x_proj[centrals[0]] + 1.0
+                elif c_idx < len(sorted_idx)-1 and "Lateral" in preds[sorted_idx[c_idx+1]]["label"]:
+                    midline_x = x_proj[centrals[0]] - 1.0
+                else:
+                    midline_x = x_proj[centrals[0]]
+            else:
+                midline_x = np.mean([x_proj[i] for i in sorted_idx])
+                
+            for i in sorted_idx:
+                label = preds[i]["label"]
+                side = "R" if x_proj[i] < midline_x else "L"
+                preds[i]["label"] = f"{prefix} {side} {label}"
+                
+        assign_left_right(upper_indices, "Maxillary")
+        assign_left_right(lower_indices, "Mandibular")
+        
+    except Exception as e:
+        print(f"Error in geometric processing: {e}")
+        
+    return preds
+
 @app.post("/run_inference")
 async def run_inference(
         image: UploadFile = File(...),
@@ -666,12 +944,15 @@ async def run_inference(
         pipeline_mode: str = Form("sequential"),
         flow_graph: str = Form("{}"),
         autopilot_model: str = Form(""),
-        all_presets: str = Form("{}")
+        all_presets: str = Form("{}"),
+        use_dental_position: str = Form("false")
 ):
     start_time = time.time()
     img_bytes = await image.read()
     nparr = np.frombuffer(img_bytes, np.uint8)
     original_img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if original_img is None:
+        return JSONResponse(status_code=400, content={"error": "Invalid or corrupted image file provided."})
     isolated_base_img = cv2.resize(original_img, (640, 640))
 
     margin = 250
@@ -682,6 +963,7 @@ async def run_inference(
     master_canvas[0:640, margin:margin + 640] = isolated_base_img
     glow_layer = np.zeros_like(master_canvas)
     all_predictions = []
+    dental_predictions = []
 
     predicted_preset = None
 
@@ -757,7 +1039,13 @@ async def run_inference(
                                 "label": class_name,
                                 "color": model_colors[model_name]
                             })
-                            detected_classes.add(class_name)
+                            
+                        if model_name == "DENTALPOSITION_R_98.onnx":
+                            preds = process_dental_positions(preds)
+                            
+                        for p in preds:
+                            detected_classes.add(p["label"])
+                            
                         model_cache[model_name] = {"predictions": preds, "detected_classes": detected_classes}
                     executed_nodes.add(curr_id)
                     detected = model_cache[model_name]["detected_classes"]
@@ -774,8 +1062,12 @@ async def run_inference(
                         model_name = node.get('modelName')
                         if model_name and model_name in model_cache:
                             for pred in model_cache[model_name]["predictions"]:
-                                if pred not in all_predictions:
-                                    all_predictions.append(pred)
+                                if model_name == "DENTALPOSITION_R_98.onnx":
+                                    if pred not in dental_predictions:
+                                        dental_predictions.append(pred)
+                                else:
+                                    if pred not in all_predictions:
+                                        all_predictions.append(pred)
 
             for edge in edges:
                 if edge['to'] in end_node_ids:
@@ -786,28 +1078,115 @@ async def run_inference(
                         model_name = node.get('modelName')
                         if node.get('filterResults', True) is True and model_name and model_name in model_cache:
                             for pred in model_cache[model_name]["predictions"]:
-                                if pred["label"] == source_port and pred not in all_predictions:
-                                    all_predictions.append(pred)
+                                if pred["label"] == source_port:
+                                    if model_name == "DENTALPOSITION_R_98.onnx":
+                                        if pred not in dental_predictions:
+                                            dental_predictions.append(pred)
+                                    else:
+                                        if pred not in all_predictions:
+                                            all_predictions.append(pred)
         except Exception as e:
             pass
     else:
         models_to_run = [m.strip() for m in active_models.split(",") if m.strip()]
+        if use_dental_position == "true" and "DENTALPOSITION_R_98.onnx" in models and "DENTALPOSITION_R_98.onnx" not in models_to_run:
+            models_to_run.append("DENTALPOSITION_R_98.onnx")
+            
         for model_name in models_to_run:
             if model_name in models:
                 model_obj = models[model_name]
                 fresh_copy = isolated_base_img.copy()
                 results = model_obj.predict(source=fresh_copy, conf=conf_threshold, imgsz=640, verbose=False)
+                preds = []
                 for box in results[0].boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     conf = float(box.conf[0])
                     cls_id = int(box.cls[0])
                     class_name = model_obj.names[cls_id]
-                    all_predictions.append({
+                    preds.append({
                         "box": [x1, y1, x2, y2],
                         "conf": conf,
                         "label": class_name,
                         "color": model_colors[model_name]
                     })
+                    
+                if model_name == "DENTALPOSITION_R_98.onnx":
+                    preds = process_dental_positions(preds)
+                    dental_predictions.extend(preds)
+                else:
+                    all_predictions.extend(preds)
+
+    if dental_predictions:
+        for pred in all_predictions:
+            best_tooth = None
+            best_tooth_box = None
+            
+            # 1. Primary matching: Check all overlaps
+            overlaps = []
+            disease_w = pred["box"][2] - pred["box"][0]
+            disease_h = pred["box"][3] - pred["box"][1]
+            disease_area = max(1, disease_w * disease_h)
+            
+            for d_pred in dental_predictions:
+                xA = max(pred["box"][0], d_pred["box"][0])
+                yA = max(pred["box"][1], d_pred["box"][1])
+                xB = min(pred["box"][2], d_pred["box"][2])
+                yB = min(pred["box"][3], d_pred["box"][3])
+                interArea = max(0, xB - xA) * max(0, yB - yA)
+                
+                if interArea > 0:
+                    overlaps.append((interArea, d_pred["label"], d_pred["box"]))
+            
+            if overlaps:
+                overlaps.sort(key=lambda x: x[0], reverse=True)
+                
+                # Check for cross-midline spanning (e.g. overlaps both L and R Central Incisors)
+                if len(overlaps) >= 2:
+                    area1, label1, box1 = overlaps[0]
+                    area2, label2, box2 = overlaps[1]
+                    
+                    # If both teeth have significant overlap (>15% of disease area)
+                    if area1 > 0.15 * disease_area and area2 > 0.15 * disease_area:
+                        parts1 = label1.split(" ")
+                        parts2 = label2.split(" ")
+                        
+                        if len(parts1) >= 3 and len(parts2) >= 3:
+                            jaw1, side1, type1 = parts1[0], parts1[1], " ".join(parts1[2:])
+                            jaw2, side2, type2 = parts2[0], parts2[1], " ".join(parts2[2:])
+                            
+                            # If they are the same jaw and same tooth type, but different sides (L vs R)
+                            if jaw1 == jaw2 and type1 == type2 and side1 != side2:
+                                best_tooth = f"{jaw1} {type1}"
+                                best_tooth_box = [min(box1[0], box2[0]), min(box1[1], box2[1]), max(box1[2], box2[2]), max(box1[3], box2[3])]
+                
+                # Fallback to the largest overlap if not spanning
+                if not best_tooth:
+                    best_tooth = overlaps[0][1]
+                    best_tooth_box = overlaps[0][2]
+                    
+            # 2. Fallback matching: If no overlap, find the tooth with the closest center
+            if not best_tooth:
+                cx = (pred["box"][0] + pred["box"][2]) / 2.0
+                cy = (pred["box"][1] + pred["box"][3]) / 2.0
+                min_dist = float('inf')
+                for d_pred in dental_predictions:
+                    dcx = (d_pred["box"][0] + d_pred["box"][2]) / 2.0
+                    dcy = (d_pred["box"][1] + d_pred["box"][3]) / 2.0
+                    dist = ((cx - dcx)**2 + (cy - dcy)**2) ** 0.5
+                    
+                    # Max allowed distance is 3.0x the size of the tooth box to catch gumline or adjacent missing teeth
+                    tooth_w = d_pred["box"][2] - d_pred["box"][0]
+                    tooth_h = d_pred["box"][3] - d_pred["box"][1]
+                    max_allowed = max(tooth_w, tooth_h) * 3.0
+                    
+                    if dist < min_dist and dist < max_allowed:
+                        min_dist = dist
+                        best_tooth = d_pred["label"]
+                        best_tooth_box = d_pred["box"]
+            
+            if best_tooth:
+                pred["tooth_position"] = best_tooth
+                pred["tooth_box"] = best_tooth_box
 
     filtered_predictions = []
     all_predictions = sorted(all_predictions, key=lambda x: x['conf'], reverse=True)
@@ -821,6 +1200,27 @@ async def run_inference(
             filtered_predictions.append(pred)
 
     summary_counts = dict(Counter([pred["label"] for pred in filtered_predictions]))
+
+    summary_grouped = {}
+    for pred in filtered_predictions:
+        tooth = pred.get("tooth_position", "General")
+        label = pred["label"]
+        if tooth not in summary_grouped:
+            summary_grouped[tooth] = {}
+        if label not in summary_grouped[tooth]:
+            summary_grouped[tooth][label] = 0
+        summary_grouped[tooth][label] += 1
+
+    detailed_findings = []
+    for pred in filtered_predictions:
+        tb = pred.get("tooth_box", None)
+        detailed_findings.append({
+            "label": pred["label"],
+            "confidence": round(float(pred["conf"]), 2),
+            "tooth_position": pred.get("tooth_position", "General"),
+            "disease_box": [float(c) for c in pred["box"]],
+            "tooth_box": [float(c) for c in tb] if tb else None
+        })
 
     left_preds = []
     right_preds = []
@@ -951,10 +1351,232 @@ async def run_inference(
         "time_taken": total_time,
         "detections": len(filtered_predictions),
         "summary": summary_counts,
+        "summary_grouped": summary_grouped,
+        "detailed_findings": detailed_findings,
         "routed_flow": predicted_preset
     })
 
 
+mobile_upload_history: List[Dict] = []
+mobile_upload_id = None
+
+import time
+from pydantic import BaseModel
+
+class MobilePing(BaseModel):
+    device_id: str
+    device_name: str
+
+active_mobile_devices = {}
+
+@app.post("/mobile_ping")
+def mobile_ping(data: MobilePing):
+    active_mobile_devices[data.device_id] = {
+        "name": data.device_name,
+        "last_ping": time.time()
+    }
+    return {"status": "ok"}
+
+@app.get("/connected_devices")
+def get_connected_devices():
+    current_time = time.time()
+    active = [
+        {"id": d_id, "name": info["name"]}
+        for d_id, info in active_mobile_devices.items()
+        if current_time - info["last_ping"] < 10
+    ]
+    return JSONResponse({"devices": active})
+
+
+import uuid
+
+def get_lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('10.255.255.255', 1))
+        IP = s.getsockname()[0]
+        s.close()
+    except Exception:
+        IP = '127.0.0.1'
+    return IP
+
+@app.get("/get_qr_codes")
+def get_qr_codes(ssid: str = "", password: str = ""):
+    ip = get_lan_ip()
+    url = f"http://{ip}:8000/mobile_camera?token={SESSION_TOKEN}"
+    
+    qr_url = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr_url.add_data(url)
+    qr_url.make(fit=True)
+    img_url = qr_url.make_image(fill_color="black", back_color="white")
+    buf_url = io.BytesIO()
+    img_url.save(buf_url, format="PNG")
+    b64_url = base64.b64encode(buf_url.getvalue()).decode("utf-8")
+    
+    b64_wifi = ""
+    if ssid:
+        wifi_str = f"WIFI:S:{ssid};T:WPA;P:{password};;"
+        qr_wifi = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr_wifi.add_data(wifi_str)
+        qr_wifi.make(fit=True)
+        img_wifi = qr_wifi.make_image(fill_color="black", back_color="white")
+        buf_wifi = io.BytesIO()
+        img_wifi.save(buf_wifi, format="PNG")
+        b64_wifi = base64.b64encode(buf_wifi.getvalue()).decode("utf-8")
+        
+    return JSONResponse({
+        "url_qr": f"data:image/png;base64,{b64_url}",
+        "wifi_qr": f"data:image/png;base64,{b64_wifi}" if b64_wifi else "",
+        "url": url
+    })
+
+@app.get("/mobile_camera")
+def mobile_camera():
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>SmiloAI Mobile Capture</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #000; color: #fff; text-align: center; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            h2 { font-weight: 600; margin-bottom: 30px; }
+            .btn { background: #007AFF; color: white; border: none; padding: 15px 30px; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-shadow: 0 4px 12px rgba(0,122,255,0.4); }
+            .btn-container { position: relative; width: 80%; max-width: 300px; margin-bottom: 20px; overflow: hidden; border-radius: 12px; }
+            input[type="file"] { position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }
+            #status { margin-top: 20px; font-size: 16px; color: #aaa; }
+        </style>
+    </head>
+    <body>
+        <h2>SmiloAI Capture</h2>
+        <div class="btn-container">
+            <button class="btn">📸 Open Camera</button>
+            <input type="file" id="cameraInput" accept="image/*" multiple>
+        </div>
+        <div id="status">Ready to capture.</div>
+        
+        <script>
+            function getDeviceName() {
+                var ua = navigator.userAgent;
+                if (/iPad/.test(ua)) return "iPad";
+                if (/iPhone/.test(ua)) return "iPhone";
+                if (/Android/.test(ua)) return "Android";
+                if (/Mac OS X/.test(ua)) return "Mac";
+                if (/Windows/.test(ua)) return "Windows";
+                return "Smartphone";
+            }
+            
+            var deviceId = localStorage.getItem('smiloai_device_id');
+            if (!deviceId) {
+                deviceId = 'dev_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('smiloai_device_id', deviceId);
+            }
+            var deviceName = getDeviceName();
+
+            function pingServer() {
+                fetch('/mobile_ping', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ device_id: deviceId, device_name: deviceName })
+                }).catch(e => console.log('Ping failed'));
+            }
+            
+            pingServer();
+            setInterval(pingServer, 3000);
+
+            document.getElementById('cameraInput').addEventListener('change', function(e) {
+                const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            document.getElementById('status').innerText = "Uploading " + files.length + " photo(s)...";
+            document.getElementById('status').style.color = "#FF9500";
+            document.querySelector('.btn').style.opacity = '0.5';
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+            
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+
+            fetch('/upload_from_mobile?token=' + token, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.querySelector('.btn').style.opacity = '1';
+                if (data.status === 'success') {
+                    document.getElementById('status').innerText = "✅ Sent " + files.length + " Photo(s) to Desktop!";
+                    document.getElementById('status').style.color = "#34C759";
+                } else {
+                    document.getElementById('status').innerText = "❌ Upload Failed";
+                    document.getElementById('status').style.color = "#FF3B30";
+                }
+            })
+            .catch(err => {
+                document.querySelector('.btn').style.opacity = '1';
+                document.getElementById('status').innerText = "❌ Network Error.";
+                document.getElementById('status').style.color = "#FF3B30";
+            });
+        });
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
+
+@app.post("/upload_from_mobile")
+async def upload_from_mobile(files: List[UploadFile] = File(...)):
+    global mobile_upload_history
+    for file in files:
+        print(f"[Mobile Upload] Incoming file: {file.filename} / Content-Type: {file.content_type}")
+        contents = await file.read()
+        new_id = str(uuid.uuid4())
+        mobile_upload_history.append({"id": new_id, "blob": contents})
+        # Keep only the last 50 images in memory to prevent Denial of Service via memory exhaustion
+        if len(mobile_upload_history) > 50:
+            mobile_upload_history.pop(0)
+        print(f"[Mobile Upload] Successfully cached {len(contents)} bytes in memory with ID: {new_id}.")
+    return {"status": "success"}
+
+@app.get("/check_mobile_upload")
+def check_mobile_upload(last_id: str = "", init: str = ""):
+    global mobile_upload_history
+    if init == "true":
+        latest_id = mobile_upload_history[-1]["id"] if mobile_upload_history else ""
+        return JSONResponse({"status": "success", "upload_id": latest_id})
+    
+    new_images = []
+    found_last = False
+    
+    if not last_id:
+        # If no last_id is provided, just return the entire history? 
+        # Wait, if last_id is empty, it means we want everything since session started.
+        found_last = True
+        
+    for item in mobile_upload_history:
+        if found_last:
+            b64 = base64.b64encode(item["blob"]).decode("utf-8")
+            new_images.append({
+                "id": item["id"],
+                "image_base64": f"data:image/jpeg;base64,{b64}"
+            })
+        if item["id"] == last_id:
+            found_last = True
+            
+    if new_images:
+        return JSONResponse({
+            "status": "success", 
+            "images": new_images,
+            "upload_id": new_images[-1]["id"]
+        })
+        
+    return JSONResponse({"status": "waiting"})
+
+
 if __name__ == "__main__":
-    print("Starting SmiloAi Engine...")
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    print("Starting SmiloAI...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

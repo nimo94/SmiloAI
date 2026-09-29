@@ -3,21 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmiloAi Engine</title>
+    <title>SmiloAI</title>
 
-    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="icon" href="/logo.png" type="image/png" sizes="192x192">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['DM Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
         body {
             background: radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.4), transparent 25%),
                         radial-gradient(circle at 85% 30%, rgba(14, 165, 233, 0.4), transparent 25%);
             background-color: #0f172a;
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'DM Sans', -apple-system, sans-serif !important;
             min-height: 100vh;
             margin: 0;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        *, *::before, *::after {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+        }
+
+        h1, h2, h3, h4, h5, h6, button, .font-bold, .font-semibold, .font-black, .tracking-widest, .tracking-wider {
+            font-family: 'Space Grotesk', sans-serif !important;
+            letter-spacing: -0.01em;
+        }
+
+        /* Force every button tag to use Space Grotesk regardless of Tailwind classes */
+        button {
+            font-family: 'Space Grotesk', sans-serif !important;
+        }
+
+        #btnInitiateSequence {
+            font-family: 'Space Grotesk', sans-serif !important;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-size: 0.85rem;
         }
 
         .glass-panel {
@@ -148,7 +190,7 @@
         <div class="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
             <div class="w-[500px] h-[500px] bg-blue-600 rounded-full blur-[150px] animate-pulse"></div>
         </div>
-        <img src="logo.png" alt="SmiloAi Engine Logo" class="h-40 md:h-56 object-contain mb-10 drop-shadow-[0_0_40px_rgba(59,130,246,0.6)] animate-pulse relative z-10">
+        <img src="logo.png" alt="SmiloAI Logo" class="h-40 md:h-56 object-contain mb-10 drop-shadow-[0_0_40px_rgba(59,130,246,0.6)] animate-pulse relative z-10">
         <div class="flex flex-col items-center gap-5 relative z-10">
             <svg class="animate-spin h-12 w-12 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -162,7 +204,7 @@
             <svg class="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9"></path></svg>
         </div>
         <h2 id="offlineTitle" class="text-3xl font-bold text-slate-400 mb-2 tracking-widest uppercase">SYSTEM OFFLINE</h2>
-        <p id="offlineText" class="text-slate-500">The SmiloAi Engine has been safely shut down. You may now close this window.</p>
+        <p id="offlineText" class="text-slate-500">The SmiloAI has been safely shut down. You may now close this window.</p>
     </div>
 
     <div class="fixed bottom-6 left-6 z-40">
@@ -223,6 +265,18 @@
         </div>
     </div>
 
+    <div id="noModelsModal" class="fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="noModelsBox" class="glass-panel p-8 rounded-3xl max-w-sm w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.2)] transform scale-95 transition-transform duration-300">
+            <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-2">No Models Active</h3>
+            <p class="text-gray-300 text-sm mb-6">Please toggle at least one AI model ON in the settings before scanning.</p>
+
+            <button onclick="closeNoModelsModal()" class="w-full px-4 py-3 rounded-xl font-bold text-slate-900 bg-red-400 hover:bg-red-300 transition shadow-lg shadow-red-500/30 text-sm">Got it</button>
+        </div>
+    </div>
+
     <div id="fullScreenSettings" class="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-3xl hidden flex-col items-center p-6 md:p-12 overflow-y-auto transition-opacity">
         <div class="w-full max-w-6xl flex justify-between items-center mb-8">
             <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">SETTINGS</h2>
@@ -239,27 +293,31 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
-            <div class="glass-panel p-6 flex flex-col gap-6">
-                <div>
-                    <h3 class="text-lg font-semibold mb-4 text-cyan-300 border-b border-white/10 pb-2 flex items-center gap-2">
+            <!-- Left Column: Settings -->
+            <div class="flex flex-col gap-6">
+                
+                <!-- Default Models -->
+                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-2xl border border-slate-600/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)]">
+                    <h3 class="text-lg font-bold mb-4 text-cyan-300 border-b border-white/10 pb-2 flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
                         Default Models
                     </h3>
                     <div id="cloudModelList" class="space-y-3"></div>
                 </div>
 
-                <div>
-                    <h3 class="text-lg font-semibold mb-4 text-emerald-300 border-b border-white/10 pb-2 flex items-center gap-2">
+                <!-- From Computer -->
+                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-900/20 to-slate-900/40 backdrop-blur-2xl border border-emerald-500/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)]">
+                    <h3 class="text-lg font-bold mb-4 text-emerald-300 border-b border-white/10 pb-2 flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         From Computer
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
-                        <label id="btnLoadRgb" class="glass-button flex items-center justify-center gap-2 py-3 rounded-xl cursor-pointer text-sm font-medium transition-all duration-300">
+                        <label id="btnLoadRgb" class="glass-button flex items-center justify-center gap-2 py-3 rounded-2xl cursor-pointer text-sm font-bold transition-all duration-300 border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]">
                             <span class="btn-text">+ Load to RGB</span>
                             <svg class="btn-spinner hidden animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             <input type="file" accept=".pt,.onnx" class="hidden" onchange="uploadLocalModel(this, 'rgb')">
                         </label>
-                        <label id="btnLoadXray" class="glass-button flex items-center justify-center gap-2 py-3 rounded-xl cursor-pointer text-sm font-medium transition-all duration-300">
+                        <label id="btnLoadXray" class="glass-button flex items-center justify-center gap-2 py-3 rounded-2xl cursor-pointer text-sm font-bold transition-all duration-300 border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]">
                             <span class="btn-text">+ Load to X-Ray</span>
                             <svg class="btn-spinner hidden animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             <input type="file" accept=".pt,.onnx" class="hidden" onchange="uploadLocalModel(this, 'xray')">
@@ -267,132 +325,157 @@
                     </div>
                 </div>
 
-                <div class="mt-auto pt-6">
-                    <h3 class="text-lg font-semibold mb-3 border-b border-white/10 pb-2">Global Sensitivity</h3>
-                    <div class="flex justify-between text-sm text-gray-300 mb-2">
+                <!-- Global Sensitivity & Toggles -->
+                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-2xl border border-slate-600/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)]">
+                    <h3 class="text-lg font-bold mb-3 border-b border-white/10 pb-2">Global Sensitivity</h3>
+                    <div class="flex justify-between text-sm text-gray-300 mb-2 font-semibold">
                         <span>Confidence Threshold</span>
-                        <span id="confValue" class="font-mono text-cyan-400">50%</span>
+                        <span id="confValue" class="font-mono text-cyan-400 font-bold">50%</span>
                     </div>
-                    <input type="range" id="confSlider" min="0.05" max="0.95" step="0.05" value="0.50" oninput="document.getElementById('confValue').innerText = Math.round(this.value*100) + '%'" onchange="saveSettings()">
-                </div>
+                    <input type="range" id="confSlider" min="0.05" max="0.95" step="0.05" value="0.50" class="w-full accent-cyan-500 cursor-pointer" oninput="document.getElementById('confValue').innerText = Math.round(this.value*100) + '%'" onchange="saveSettings()">
 
-                <div class="mt-2 pt-6 border-t border-white/10">
-                    <div class="flex items-center justify-between">
+                    <div class="mt-6 pt-6 border-t border-white/10 mb-6">
+                        <p class="text-xs text-amber-400/90 font-medium tracking-wide bg-amber-400/10 p-3 rounded-xl border border-amber-400/20">
+                            <span class="font-bold text-amber-400">NOTE:</span> Default Model download requires an active internet connection to download, and the AI Clinical Assistant also requires an internet connection. No patient data is uploaded to the internet.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t border-white/10 flex items-center justify-between">
                         <div>
-                            <h3 class="text-lg font-semibold text-purple-400">AI Assistant</h3>
-                            <p class="text-xs text-gray-400 mt-1">Generate clinical treatment summaries</p>
+                            <h3 class="text-lg font-bold text-purple-400">AI Assistant</h3>
+                            <p class="text-xs text-gray-400 mt-1 font-medium">Generate clinical treatment summaries</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="aiAssistantToggle" class="sr-only peer" checked onchange="saveSettings()">
-                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
                         </label>
                     </div>
 
-                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                    <div class="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
                         <div>
-                            <h3 class="text-sm font-semibold text-yellow-400">Batch AI Warning</h3>
-                            <p class="text-xs text-gray-400 mt-1">Warn before high-token batch processing</p>
+                            <h3 class="text-sm font-bold text-yellow-400">Batch AI Warning</h3>
+                            <p class="text-xs text-gray-400 mt-1 font-medium">Warn before high-token batch processing</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="showBatchWarningToggle" class="sr-only peer" checked onchange="saveSettings()">
-                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yellow-500"></div>
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500 shadow-inner"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6 pt-6 border-t border-white/10">
+                        <div>
+                            <h3 class="text-sm font-bold text-cyan-400">Dental Position Model</h3>
+                            <p class="text-xs text-gray-400 mt-1 font-medium">Detect tooth positions in RGB mode</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer" id="dentalPositionLabel">
+                            <input type="checkbox" id="dentalPositionToggle" class="sr-only peer" checked onchange="saveSettings()">
+                            <div id="dentalPositionToggleBg" class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500 shadow-inner"></div>
                         </label>
                     </div>
                 </div>
             </div>
 
-            <div class="glass-panel p-6 flex flex-col gap-6">
+            <!-- Right Column: Flow Controls -->
+            <div class="flex flex-col gap-6">
 
-                <div class="bg-blue-900/20 border border-blue-500/30 p-4 rounded-xl flex items-center justify-between">
-                    <div>
-                        <h3 class="font-bold text-blue-400">Pipeline Execution</h3>
-                        <div class="flex gap-4 mt-2">
-                            <label class="flex items-center gap-2 cursor-pointer text-sm">
-                                <input type="radio" name="pipelineMode" value="sequential" checked class="accent-blue-500" onchange="togglePipelineUI()"> Sequential
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer text-sm">
-                                <input type="radio" name="pipelineMode" value="custom" class="accent-blue-500" onchange="togglePipelineUI()"> Custom Flow
-                            </label>
-                        </div>
+                <!-- Pipeline Execution -->
+                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900/30 to-blue-900/10 backdrop-blur-2xl border border-blue-400/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)]">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-blue-400 text-lg">Pipeline Execution</h3>
+                        <button id="btnOpenFlow" onclick="openFlowBuilder()" class="hidden px-4 py-2 rounded-xl text-xs text-blue-100 font-bold bg-blue-500/20 border border-blue-400/40 hover:bg-blue-500/40 hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] transition-all">Edit Flow</button>
                     </div>
-                    <button id="btnOpenFlow" onclick="openFlowBuilder()" class="hidden glass-button px-4 py-2 rounded-lg text-sm text-blue-300 font-bold border-blue-500/50 hover:bg-blue-500/20">Edit Flow</button>
+                    
+                    <div class="flex bg-slate-900/60 p-1.5 rounded-2xl border border-slate-700/50 w-full relative shadow-inner">
+                        <label class="flex-1 text-center cursor-pointer">
+                            <input type="radio" name="pipelineMode" value="sequential" checked class="peer sr-only" onchange="togglePipelineUI()">
+                            <div class="py-2.5 text-sm font-bold rounded-xl text-slate-400 peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-cyan-500 peer-checked:text-white transition-all duration-300 peer-checked:shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                                Sequential
+                            </div>
+                        </label>
+                        <label class="flex-1 text-center cursor-pointer">
+                            <input type="radio" name="pipelineMode" value="custom" class="peer sr-only" onchange="togglePipelineUI()">
+                            <div class="py-2.5 text-sm font-bold rounded-xl text-slate-400 peer-checked:bg-gradient-to-r peer-checked:from-blue-500 peer-checked:to-cyan-500 peer-checked:text-white transition-all duration-300 peer-checked:shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                                Custom Flow
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
-                <div id="autoPilotMainContainer" class="hidden bg-purple-900/20 border border-purple-500/30 p-5 rounded-xl flex flex-col gap-4">
+                <!-- Auto Pilot -->
+                <div id="autoPilotMainContainer" class="hidden relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900/30 to-fuchsia-900/10 backdrop-blur-2xl border border-purple-500/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)] flex-col gap-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 class="font-bold text-purple-400 flex items-center gap-2">
+                            <h3 class="font-bold text-purple-400 flex items-center gap-2 text-lg">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                                 Auto-Pilot Router
                             </h3>
-                            <p class="text-xs text-gray-400 mt-1">Let AI dynamically choose the best flow.</p>
+                            <p class="text-xs text-purple-200/60 mt-1 font-medium">Let AI dynamically choose the best flow.</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="autoPilotToggle" class="sr-only peer" onchange="toggleAutoPilot()">
-                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
                         </label>
                     </div>
 
-                    <div id="autoPilotControls" class="hidden flex flex-col gap-3">
+                    <div id="autoPilotControls" class="hidden flex flex-col gap-4">
                         <input type="hidden" id="autoPilotModelSelect" value="">
                         <div class="relative w-full text-left z-[55]">
-                            <button id="apDropdownBtn" onclick="toggleApDropdown(event)" class="w-full flex items-center justify-between bg-black/30 border border-purple-500/30 rounded-lg p-2.5 text-white text-sm focus:outline-none hover:border-purple-500 transition-all">
+                            <button id="apDropdownBtn" onclick="toggleApDropdown(event)" class="w-full flex items-center justify-between bg-black/40 border border-purple-500/40 rounded-2xl p-3 text-white text-sm font-bold focus:outline-none hover:border-purple-400 transition-all shadow-inner">
                                 <span id="apDropdownText" class="truncate pointer-events-none">Select a model...</span>
-                                <svg class="w-4 h-4 ml-1 text-gray-400 pointer-events-none shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <svg class="w-4 h-4 ml-1 text-purple-300 pointer-events-none shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </button>
-                            <div id="apDropdownMenu" class="hidden absolute bottom-full left-0 mb-2 w-full rounded-xl bg-slate-800/95 backdrop-blur-xl border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.2)] py-2 overflow-hidden transition-all">
+                            <div id="apDropdownMenu" class="hidden absolute top-full mt-2 left-0 w-full rounded-2xl bg-slate-800/95 backdrop-blur-xl border border-purple-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.8)] py-2 overflow-hidden transition-all z-[100]">
                                 <div id="apDropdownList" class="max-h-48 overflow-y-auto custom-scrollbar-purple"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between pt-4 border-t border-purple-500/20">
+                    <div class="flex items-center justify-between pt-5 border-t border-purple-500/20">
                         <div class="flex flex-col">
-                            <span class="text-sm font-bold text-gray-300">Data Collection</span>
-                            <span class="text-xs text-gray-500">Show 'Add to Auto-Pilot' button on scans</span>
+                            <span class="text-sm font-bold text-gray-200">Data Collection</span>
+                            <span class="text-xs text-purple-200/60 font-medium">Show 'Add to Auto-Pilot' button on scans</span>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="dataCollectionToggle" class="sr-only peer" onchange="saveSettings()">
-                            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-500"></div>
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
                         </label>
                     </div>
 
-                    <button id="btnOpenTrainer" onclick="showTrainerWarning()" class="w-full mt-2 py-3 rounded-xl font-bold text-slate-900 bg-purple-400 hover:bg-purple-300 transition shadow-[0_0_15px_rgba(168,85,247,0.3)] text-sm flex items-center justify-center gap-2">
+                    <button id="btnOpenTrainer" onclick="showTrainerWarning()" class="w-full mt-2 py-3 rounded-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 transition shadow-[0_0_20px_rgba(168,85,247,0.4)] text-sm flex items-center justify-center gap-2 border border-purple-400/50">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                         OPEN TRAINING APP
                     </button>
                 </div>
 
-
-                <div id="sequentialUiPanels">
-                    <div id="rgbSection" class="p-4 bg-white/5 rounded-xl border border-white/10 transition-all duration-300 mb-4">
+                <div id="sequentialUiPanels" class="flex flex-col gap-6">
+                    <div id="rgbSection" class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900/20 to-slate-900/40 backdrop-blur-2xl border border-blue-500/20 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="font-bold text-blue-400">RGB SCAN</span>
+                            <span class="font-bold text-blue-400 text-lg">RGB SCAN</span>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="rgbMasterToggle" class="sr-only peer" checked onchange="toggleCategoryVisuals()">
-                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-inner"></div>
                             </label>
                         </div>
-                        <div id="rgbModelList" class="space-y-2 max-h-[200px] overflow-y-auto pr-2 text-gray-400 text-sm italic">
+                        <div id="rgbModelList" class="space-y-3 max-h-[200px] overflow-y-auto pr-2 text-gray-400 text-sm italic font-medium custom-scrollbar">
                             No RGB models loaded.
                         </div>
                     </div>
 
-                    <div id="xraySection" class="p-4 bg-white/5 rounded-xl border border-white/10 opacity-40 grayscale transition-all duration-300">
+                    <div id="xraySection" class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-900/20 to-slate-900/40 backdrop-blur-2xl border border-purple-500/20 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_10px_30px_rgba(0,0,0,0.5)] opacity-40 grayscale transition-all duration-300">
                         <div class="flex items-center justify-between mb-4">
-                            <span class="font-bold text-purple-400">X-RAY SCAN</span>
+                            <span class="font-bold text-purple-400 text-lg">X-RAY SCAN</span>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="xrayMasterToggle" class="sr-only peer" onchange="toggleCategoryVisuals()">
-                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                                <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
                             </label>
                         </div>
-                        <div id="xrayModelList" class="space-y-2 max-h-[200px] overflow-y-auto pr-2 text-gray-400 text-sm italic">
+                        <div id="xrayModelList" class="space-y-3 max-h-[200px] overflow-y-auto pr-2 text-gray-400 text-sm italic font-medium custom-scrollbar-purple">
                             No X-Ray models loaded.
                         </div>
                     </div>
                 </div>
 
-                <div id="customFlowUiPanel" class="hidden h-full flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-xl border border-white/10 transition-all">
+                <div id="customFlowUiPanel" class="hidden h-full flex flex-col items-center justify-center text-center p-8 transition-all">
                 </div>
             </div>
         </div>
@@ -400,7 +483,7 @@
 
     <div class="max-w-5xl mx-auto flex flex-col items-center">
         <header class="mb-10 text-center w-full">
-            <img src="logo.png" alt="SmiloAi Engine Logo" class="h-32 md:h-40 mx-auto object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-transform duration-500 hover:scale-105">
+            <img src="logo.png" alt="SmiloAI Logo" class="h-32 md:h-40 mx-auto object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-transform duration-500 hover:scale-105">
             <p class="text-gray-400 mt-4 tracking-widest uppercase text-sm font-semibold">Advanced Dental Detection AI</p>
         </header>
 
@@ -423,14 +506,19 @@
                         <span>Upload Image(s)</span>
                         <input type="file" id="imageInput" accept="image/*" multiple class="hidden" onchange="handleImageUpload(this)">
                     </label>
+                    <button onclick="openDeviceHubModal()" class="glass-button flex items-center justify-center gap-2 w-full py-5 mt-3 rounded-xl cursor-pointer text-sm font-medium text-purple-300 border border-purple-500/30 hover:bg-purple-500/10 transition-all shadow-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <span>Connect Camera Devices</span>
+                    </button>
+
                 </div>
 
                 <div class="mt-auto flex flex-col gap-3">
-                    <button id="btnInitiateSequence" onclick="runInference()" class="w-full py-5 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none">
+                    <button id="btnInitiateSequence" onclick="runInference()" style="font-family:'Space Grotesk',sans-serif;letter-spacing:0.15em;font-size:0.82rem;" class="w-full py-5 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none">
                         INITIATE SEQUENCE
                     </button>
 
-                    <button id="btnExportPDF" onclick="exportClinicalReport()" class="hidden w-full py-3 rounded-xl font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 transition-all shadow-lg flex items-center justify-center gap-2">
+                    <button id="btnExportPDF" onclick="openExportModal()" class="hidden w-full py-3 rounded-xl font-bold text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 transition-all shadow-lg flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         EXPORT HTML REPORT
                     </button>
@@ -528,7 +616,7 @@
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9"></path></svg>
             </div>
             <h3 class="text-2xl font-bold text-white mb-2">System Shutdown</h3>
-            <p class="text-gray-300 mb-6">Are you sure you want to completely shut down the SmiloAi Engine? You will need to manually restart the application to use it again.</p>
+            <p class="text-gray-300 mb-6">Are you sure you want to completely shut down the SmiloAI? You will need to manually restart the application to use it again.</p>
             <div class="flex gap-4 justify-center">
                 <button onclick="closeShutdownWarning()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
                 <button onclick="confirmShutdown()" class="px-6 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-400 transition shadow-lg shadow-red-500/30 w-1/2">Shut Down</button>
@@ -542,7 +630,7 @@
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             </div>
             <h3 class="text-2xl font-bold text-white mb-2">Maximize Performance</h3>
-            <p class="text-gray-300 mb-6 text-sm">To ensure the fastest training speed, the SmiloAi Engine will safely shut down to free up CPU and Memory resources. The Training App will open automatically.</p>
+            <p class="text-gray-300 mb-6 text-sm">To ensure the fastest training speed, the SmiloAI will safely shut down to free up CPU and Memory resources. The Training App will open automatically.</p>
             <div class="flex gap-4 justify-center">
                 <button onclick="closeTrainerWarning()" class="px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 w-1/2">Back</button>
                 <button onclick="confirmTrainerLaunch()" class="px-6 py-3 rounded-xl font-bold text-slate-900 bg-purple-400 hover:bg-purple-300 transition shadow-lg shadow-purple-500/30 w-1/2">Continue</button>
@@ -557,7 +645,7 @@
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
             </div>
             <h3 class="text-2xl font-bold text-white mb-2">Trainer Not Found</h3>
-            <p class="text-gray-300 mb-6 text-sm">The SmiloAi Engine could not locate the Auto-Pilot Training application. Please ensure <span class="text-red-400 font-mono font-bold">auto_pilot_trainer.exe</span> is located in the correct folder.</p>
+            <p class="text-gray-300 mb-6 text-sm">The SmiloAI could not locate the Auto-Pilot Training application. Please ensure <span class="text-red-400 font-mono font-bold">auto_pilot_trainer.exe</span> is located in the correct folder.</p>
             <div class="flex justify-center">
                 <button onclick="closeTrainerNotFoundWarning()" class="w-full px-6 py-3 rounded-xl font-bold text-gray-300 bg-white/5 hover:bg-white/10 transition border border-white/10 text-sm">Back</button>
             </div>
@@ -696,6 +784,45 @@
         </div>
     </div>
 
+    <!-- ✨ NEW: Export Type Modal -->
+    <div id="exportTypeModal" class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
+        <div id="exportTypeBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-blue-500/30 shadow-[0_0_40px_rgba(59,130,246,0.1)] transform scale-95 transition-transform duration-300">
+            <h3 class="text-2xl font-bold text-white mb-2">Export Clinical Report</h3>
+            <p class="text-slate-400 mb-8 text-sm">Choose your preferred export format.</p>
+            
+            <div class="flex flex-col gap-4 mb-8">
+                <button onclick="executeExport('html')" class="group flex items-center justify-between p-4 rounded-xl bg-slate-800/50 hover:bg-blue-500/20 border border-slate-700 hover:border-blue-500/50 transition-all text-left">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-white text-md">HTML Document</h4>
+                            <p class="text-xs text-slate-400 mt-1">Instant opening. Best for interactive web viewing.</p>
+                        </div>
+                    </div>
+                    <svg class="w-5 h-5 text-slate-500 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+
+                <button id="pdfOptionBtn" onclick="executeExport('pdf')" class="group relative flex items-center justify-between p-4 rounded-xl bg-slate-800/50 hover:bg-emerald-500/20 border border-slate-700 hover:border-emerald-500/50 transition-all text-left overflow-hidden">
+                    <div id="pdfExportProgressBg" class="absolute left-0 top-0 bottom-0 bg-emerald-500/20 w-0 transition-all duration-300"></div>
+                    <div class="flex items-center gap-4 relative z-10">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <div>
+                            <h4 id="pdfExportTitle" class="font-bold text-white text-md">PDF Document</h4>
+                            <p id="pdfExportDesc" class="text-xs text-slate-400 mt-1">Background generation. Best for printing or sharing.</p>
+                        </div>
+                    </div>
+                    <svg id="pdfExportArrow" class="w-5 h-5 text-slate-500 group-hover:text-emerald-400 transition-colors relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+            
+            <button id="closeExportModalBtn" onclick="closeExportModal()" class="px-6 py-3 rounded-xl font-bold text-slate-400 hover:text-white bg-transparent transition w-full text-sm">Cancel</button>
+        </div>
+    </div>
+
     <div id="deletePresetWarningModal" class="fixed inset-0 z-[90] bg-slate-900/80 backdrop-blur-sm hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300">
         <div id="deletePresetWarningBox" class="glass-panel p-8 rounded-3xl max-w-md w-full text-center border-red-500/30 bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.2)] transform scale-95 transition-transform duration-300">
             <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto mb-4">
@@ -711,6 +838,19 @@
     </div>
 
     <script>
+        // Security Helper: Escape HTML to prevent DOM XSS vulnerabilities
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag]));
+        }
+
         // Application state and configuration
         const API_URL = "http://127.0.0.1:8000";
 
@@ -781,7 +921,7 @@
 
             const offlineOverlay = document.getElementById('systemOfflineOverlay');
             document.getElementById('offlineTitle').innerText = "SYSTEM OFFLINE";
-            document.getElementById('offlineText').innerText = "The SmiloAi Engine has been safely shut down. You may now close this window.";
+            document.getElementById('offlineText').innerText = "The SmiloAI has been safely shut down. You may now close this window.";
 
             offlineOverlay.classList.remove('hidden');
             offlineOverlay.classList.add('flex');
@@ -830,7 +970,7 @@
 
                     document.getElementById('offlineTitle').innerText = "TRAINER LAUNCHED";
                     document.getElementById('offlineTitle').classList.replace('text-slate-400', 'text-purple-400');
-                    document.getElementById('offlineText').innerText = "SmiloAi Engine has released CPU/RAM resources to maximize training speed. You may now close this window.";
+                    document.getElementById('offlineText').innerText = "SmiloAI has released CPU/RAM resources to maximize training speed. You may now close this window.";
 
                     offlineOverlay.classList.remove('hidden');
                     offlineOverlay.classList.add('flex');
@@ -884,23 +1024,106 @@
 
             if (apEnabled) {
                 panel.innerHTML = `
-                    <svg class="w-16 h-16 text-purple-500/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                    <p class="text-purple-300 font-bold text-lg">Auto-Pilot Smart Routing</p>
-                    <p class="text-sm text-gray-400 mt-2">The AI engine will dynamically analyze each scan and choose the best custom flow automatically.</p>
+                    <div class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-purple-900/40 to-slate-900/60 backdrop-blur-xl border border-purple-500/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.5)] group">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-purple-600 to-fuchsia-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                        <div class="relative flex flex-col items-center text-center z-10">
+                            <div class="w-16 h-16 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-400/50 mb-4 shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+                                <svg class="w-8 h-8 text-purple-300 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <h4 class="text-purple-300 font-bold text-xl tracking-wide">AUTO-PILOT ACTIVE</h4>
+                            <p class="text-sm text-purple-200/70 mt-2 font-medium">Dynamic AI routing engaged.</p>
+                            
+                            <div class="flex flex-wrap items-center justify-center gap-2 mt-6 w-full">
+                                <div class="h-2 w-2 rounded-full bg-purple-400 animate-ping"></div>
+                                <div class="h-0.5 w-8 bg-gradient-to-r from-purple-400/50 to-transparent"></div>
+                                <div class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 backdrop-blur-md text-xs text-white shadow-sm">AI Analysis</div>
+                                <div class="h-0.5 w-8 bg-gradient-to-l from-purple-400/50 to-transparent"></div>
+                                <div class="h-2 w-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]"></div>
+                            </div>
+                        </div>
+                    </div>
                 `;
-                panel.className = "hidden h-full flex flex-col items-center justify-center text-center p-8 bg-purple-500/5 rounded-xl border border-purple-500/20 transition-all";
+                panel.className = "hidden transition-all w-full mt-4";
             } else {
-                let flowText = currentSelectedPreset ? `Preset: ${currentSelectedPreset}` : "Unsaved Custom Flow";
+                let flowText = currentSelectedPreset ? currentSelectedPreset : "Custom Configuration";
+                
+                let activeNodes = [];
+                if (currentSelectedPreset && typeof flowPresets !== 'undefined' && flowPresets[currentSelectedPreset]) {
+                    activeNodes = flowPresets[currentSelectedPreset].nodes || [];
+                } else if (typeof flowNodes !== 'undefined') {
+                    activeNodes = flowNodes || [];
+                }
+                
+                // Filter out 'start' and 'end' nodes because 'Input' and 'Output' are already hardcoded
+                let modelNodes = activeNodes.filter(n => n.type === 'model');
+
+                let pipelineHtml = '';
+                if (modelNodes.length === 0) {
+                    pipelineHtml = `<div class="px-3 py-2 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 backdrop-blur-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] text-xs text-slate-300 font-semibold">Empty Pipeline</div>`;
+                } else {
+                    pipelineHtml += `<div class="px-3 py-2 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 backdrop-blur-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] text-xs text-blue-100 font-semibold flex items-center gap-1.5 whitespace-nowrap"><div class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div> Input</div>`;
+                    
+                    const colorClasses = [
+                        "from-cyan-500/20 to-blue-500/10 border-cyan-400/30 text-cyan-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_15px_rgba(6,182,212,0.3)]",
+                        "from-purple-500/20 to-fuchsia-500/10 border-purple-400/30 text-purple-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_15px_rgba(168,85,247,0.3)]",
+                        "from-emerald-500/20 to-teal-500/10 border-emerald-400/30 text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_0_15px_rgba(16,185,129,0.3)]"
+                    ];
+                    
+                    let displayNodes = modelNodes.slice(0, 4);
+                    displayNodes.forEach((node, idx) => {
+                        let classes = colorClasses[idx % colorClasses.length];
+                        let displayName = node.modelName ? node.modelName.replace('.onnx', '').replace(/_/g, ' ') : node.type.toUpperCase();
+                        pipelineHtml += `
+                            <div class="h-0.5 w-4 bg-gradient-to-r from-white/20 to-white/60 relative shrink-0">
+                                <div class="absolute inset-0 bg-white/40 animate-[pulse_1s_ease-in-out_infinite]"></div>
+                            </div>
+                            <div class="px-3 py-2 rounded-xl bg-gradient-to-br border backdrop-blur-lg font-bold whitespace-nowrap text-xs ${classes}">
+                                ${displayName}
+                            </div>
+                        `;
+                    });
+                    
+                    if (modelNodes.length > 4) {
+                        pipelineHtml += `
+                            <div class="h-0.5 w-4 bg-gradient-to-r from-white/20 to-white/60 relative shrink-0"></div>
+                            <div class="px-3 py-2 rounded-xl bg-white/5 border border-white/20 backdrop-blur-lg text-xs text-gray-400 whitespace-nowrap font-bold">
+                                +${modelNodes.length - 4} more
+                            </div>
+                        `;
+                    }
+
+                    pipelineHtml += `
+                        <div class="h-0.5 w-4 bg-gradient-to-r from-white/20 to-white/60 relative shrink-0"></div>
+                        <div class="px-3 py-2 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 backdrop-blur-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] text-xs text-emerald-100 font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                            Output <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                        </div>
+                    `;
+                }
+
                 panel.innerHTML = `
-                    <svg class="w-16 h-16 text-blue-500/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    <p class="text-blue-300 font-bold text-lg">Active Flow: <br><span class="text-white">${flowText}</span></p>
-                    <p class="text-sm text-gray-400 mt-2">The engine will strictly follow the conditional wires you placed in the Flow Builder.</p>
+                    <div class="relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-900/30 to-cyan-900/20 backdrop-blur-2xl border border-blue-400/30 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_10px_40px_rgba(0,0,0,0.6)] group">
+                        <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl"></div>
+                        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl"></div>
+                        
+                        <div class="relative flex flex-col items-center text-center z-10 w-full">
+                            <span class="px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs font-bold tracking-widest mb-4 shadow-[0_0_10px_rgba(59,130,246,0.3)]">ACTIVE PIPELINE</span>
+                            <h4 class="text-white font-bold text-lg tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-cyan-200">${flowText}</h4>
+                            
+                            <div class="flex flex-wrap items-center justify-center gap-1 mt-6 w-full opacity-90 overflow-x-auto pb-2 custom-scrollbar">
+                                ${pipelineHtml}
+                            </div>
+                        </div>
+                    </div>
                 `;
-                panel.className = "hidden h-full flex flex-col items-center justify-center text-center p-8 bg-white/5 rounded-xl border border-white/10 transition-all";
+                panel.className = "hidden transition-all w-full mt-4";
             }
 
             const isCustom = document.querySelector('input[name="pipelineMode"]:checked').value === 'custom';
             if (isCustom) panel.classList.remove('hidden');
+            
+            if (typeof updateDentalPositionToggleState === 'function') {
+                updateDentalPositionToggleState();
+            }
         }
 
         // State Sync: Auto-Pilot
@@ -1045,6 +1268,11 @@
             localStorage.setItem('smiloai_autopilot_enabled', apEnabled);
             localStorage.setItem('smiloai_autopilot_model', apModel);
             localStorage.setItem('smiloai_data_collection', apDataCol);
+
+            const dentalPos = document.getElementById('dentalPositionToggle');
+            if (dentalPos && !dentalPos.disabled) {
+                localStorage.setItem('smiloai_dental_position', dentalPos.checked);
+            }
         }
 
         function loadSettings() {
@@ -1102,6 +1330,12 @@
                 if (savedAutoPilot === 'true') {
                     document.getElementById('autoPilotControls').classList.remove('hidden');
                 }
+            }
+
+            const savedDentalPos = localStorage.getItem('smiloai_dental_position');
+            if (savedDentalPos !== null) {
+                const dentalPos = document.getElementById('dentalPositionToggle');
+                if (dentalPos) dentalPos.checked = (savedDentalPos === 'true');
             }
         }
 
@@ -1174,6 +1408,50 @@
                     setTimeout(() => checkEngineState(true), 1500);
                 }
             }
+
+            updateDentalPositionToggleState();
+        }
+
+        function updateDentalPositionToggleState() {
+            const dpLabel = document.getElementById('dentalPositionLabel');
+            const dpToggle = document.getElementById('dentalPositionToggle');
+            
+            if (!dpLabel || !dpToggle) return;
+
+            const isDownloaded = loadedModelsMemory.some(m => m.includes("DENTALPOSITION"));
+            
+            const isCustom = document.querySelector('input[name="pipelineMode"]:checked')?.value === 'custom';
+            let isXrayActive = false;
+            
+            if (isCustom) {
+                for (let node of flowNodes) {
+                    if (node.type === 'model') {
+                        const info = parseModelInfo(node.modelName);
+                        if (info.category === 'xray') {
+                            isXrayActive = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                const xrayToggle = document.getElementById('xrayMasterToggle');
+                if (xrayToggle) {
+                    isXrayActive = xrayToggle.checked;
+                }
+            }
+
+            if (!isDownloaded || isXrayActive) {
+                dpLabel.classList.add('opacity-30', 'cursor-not-allowed', 'grayscale');
+                dpToggle.disabled = true;
+                dpToggle.checked = false;
+            } else {
+                dpLabel.classList.remove('opacity-30', 'cursor-not-allowed', 'grayscale');
+                dpToggle.disabled = false;
+                const savedState = localStorage.getItem('smiloai_dental_position');
+                if (savedState !== null) {
+                    dpToggle.checked = (savedState === 'true');
+                }
+            }
         }
 
         // UI Event Handlers
@@ -1199,6 +1477,8 @@
 
             rgbToggle.checked ? rgbSection.classList.remove('opacity-40', 'grayscale') : rgbSection.classList.add('opacity-40', 'grayscale');
             xrayToggle.checked ? xraySection.classList.remove('opacity-40', 'grayscale') : xraySection.classList.add('opacity-40', 'grayscale');
+            
+            updateDentalPositionToggleState();
         }
 
         function togglePipelineUI() {
@@ -1216,6 +1496,7 @@
             }
             saveSettings();
             refreshCustomFlowDisplay();
+            updateDentalPositionToggleState();
         }
 
         function handleImageUpload(input) {
@@ -1228,7 +1509,7 @@
 
             document.getElementById('btnExportPDF').innerHTML = `
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                EXPORT HTML REPORT
+                EXPORT REPORT
             `;
 
             if (input.files.length > 1) {
@@ -1264,10 +1545,224 @@
             input.value = "";
         }
 
+        // Export Modal Handlers
+        function openExportModal() {
+            const modal = document.getElementById('exportTypeModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
+            
+            // Reset PDF UI
+            document.getElementById('pdfOptionBtn').classList.remove('pointer-events-none');
+            document.getElementById('pdfExportProgressBg').style.width = '0%';
+            document.getElementById('pdfExportTitle').innerText = 'PDF Document';
+            document.getElementById('pdfExportDesc').innerText = 'High-resolution PDF. May take several minutes for large batches.';
+            document.getElementById('closeExportModalBtn').innerText = 'Cancel';
+        }
+
+        function closeExportModal() {
+            const modal = document.getElementById('exportTypeModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        async function executeExport(type) {
+            let reportTab = null;
+            if (type === 'html') {
+                reportTab = window.open('', '_blank');
+                if (reportTab) {
+                    reportTab.document.write(`
+                        <div style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f8fafc; color: #334155;">
+                            <h2>Generating Advanced Clinical Report...</h2>
+                            <p>Processing AI diagnostics. This tab will automatically update when ready.</p>
+                        </div>
+                    `);
+                }
+                closeExportModal();
+                await exportClinicalReport(false, reportTab);
+            } else if (type === 'pdf') {
+                const btn = document.getElementById('pdfOptionBtn');
+                btn.classList.add('pointer-events-none');
+                document.getElementById('pdfExportTitle').innerText = 'Extracting Graphics...';
+                document.getElementById('pdfExportDesc').innerText = 'Building high-res DOM...';
+                document.getElementById('closeExportModalBtn').innerText = 'Running...';
+                
+                await exportClinicalReport(true, null);
+            }
+        }
+
         // Report Generation
-        function exportClinicalReport() {
+        async function exportClinicalReport(isPdfMode = false, reportTab = null) {
             const dateStr = new Date().toLocaleDateString();
             const patientId = "PT-" + Math.floor(Math.random() * 90000 + 10000);
+
+            const formatToothName = (name) => {
+                if (!name) return name;
+                
+                let normalized = name.replace(/\b R \b/gi, ' RIGHT ').replace(/\b L \b/gi, ' LEFT ').toUpperCase();
+                
+                const match = normalized.match(/(MAXILLARY|MANDIBULAR)\s+(RIGHT|LEFT)\s+(.*)/);
+                if (match) {
+                    const jaw = match[1];
+                    const side = match[2];
+                    const type = match[3].trim();
+                    
+                    let num = 0;
+                    if (type === 'CENTRAL INCISOR') num = 1;
+                    else if (type === 'LATERAL INCISOR') num = 2;
+                    else if (type === 'CANINE') num = 3;
+                    else if (type === '1ST PREMOLAR') num = 4;
+                    else if (type === '2ND PREMOLAR') num = 5;
+                    else if (type === '1ST MOLAR') num = 6;
+                    else if (type === '2ND MOLAR') num = 7;
+                    else if (type === '3RD MOLAR') num = 8;
+                    
+                    if (num > 0) {
+                        let fdiQuad = 0;
+                        if (jaw === 'MAXILLARY' && side === 'RIGHT') fdiQuad = 1;
+                        else if (jaw === 'MAXILLARY' && side === 'LEFT') fdiQuad = 2;
+                        else if (jaw === 'MANDIBULAR' && side === 'LEFT') fdiQuad = 3;
+                        else if (jaw === 'MANDIBULAR' && side === 'RIGHT') fdiQuad = 4;
+                        let fdi = `${fdiQuad}${num}`;
+                        
+                        let universal = 0;
+                        if (jaw === 'MAXILLARY' && side === 'RIGHT') universal = 9 - num;
+                        else if (jaw === 'MAXILLARY' && side === 'LEFT') universal = 8 + num;
+                        else if (jaw === 'MANDIBULAR' && side === 'LEFT') universal = 25 - num;
+                        else if (jaw === 'MANDIBULAR' && side === 'RIGHT') universal = 24 + num;
+                        
+                        return `${normalized} (Tooth ${fdi} FDI / ${universal} Universal)`;
+                    }
+                }
+                
+                return normalized;
+            };
+
+            // Helper to pre-load image once to save RAM and CPU
+            const preloadImage = (base64Image) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onerror = () => resolve(null);
+                    img.onload = () => resolve(img);
+                    img.src = base64Image;
+                });
+            };
+
+            // Helper to shrink massive images just for HTML display (massively speeds up PDF printing)
+            const downscaleForDisplay = async (base64Image) => {
+                const img = await preloadImage(base64Image);
+                if (!img) return base64Image;
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const targetWidth = 500; // max width for display cards
+                if (img.width <= targetWidth) return base64Image;
+                
+                const scale = targetWidth / img.width;
+                canvas.width = targetWidth;
+                canvas.height = img.height * scale;
+                
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                return canvas.toDataURL('image/jpeg', 0.6);
+            };
+
+            // Helper to crop images using canvas synchronously (since image is preloaded)
+            const cropImage = (img, box, padding = 20) => {
+                if (!box || !img) return null;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Map 640x640 coordinates back to original image dimensions
+                const scaleX = img.width / 640;
+                const scaleY = img.height / 640;
+                
+                const x1 = Math.max(0, (box[0] * scaleX) - padding);
+                const y1 = Math.max(0, (box[1] * scaleY) - padding);
+                const x2 = Math.min(img.width, (box[2] * scaleX) + padding);
+                const y2 = Math.min(img.height, (box[3] * scaleY) + padding);
+                
+                const w = x2 - x1;
+                const h = y2 - y1;
+                
+                canvas.width = w;
+                canvas.height = h;
+                ctx.drawImage(img, x1, y1, w, h, 0, 0, w, h);
+                return canvas.toDataURL('image/jpeg', 0.9);
+            };
+
+            const buildDetailedHtml = async (findings, origBase64) => {
+                let blocks = [];
+                if (findings && findings.length > 0) {
+                    // Pre-load the master image ONCE for this entire scan
+                    const masterImg = await preloadImage(origBase64);
+                    
+                    let currentHtml = `<h2 class="text-xl font-black text-slate-900 mb-6 border-b-2 border-slate-800 pb-2 flex items-center gap-2 mt-12">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                                Granular Flaw Analysis
+                             </h2>`;
+                    
+                    const MAX_PER_PAGE = 4;
+                    let count = 0;
+                    
+                    for (let i = 0; i < findings.length; i++) {
+                        const finding = findings[i];
+                        
+                        if (count >= MAX_PER_PAGE) {
+                            blocks.push(currentHtml);
+                            currentHtml = '';
+                            count = 0;
+                        }
+                        
+                        // Yield to main thread every few crops so the browser doesn't freeze
+                        if (i % 3 === 0) await new Promise(r => setTimeout(r, 0));
+                        
+                        const flawCrop = cropImage(masterImg, finding.disease_box, 30);
+                        let toothCrop = null;
+                        if (finding.tooth_box) {
+                            toothCrop = cropImage(masterImg, finding.tooth_box, 40);
+                        } else {
+                            toothCrop = cropImage(masterImg, finding.disease_box, 150); 
+                        }
+
+                        currentHtml += `
+                            <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm mb-6 flex flex-col md:flex-row gap-6 page-break-inside-avoid">
+                                <div class="flex-1">
+                                    <h4 class="text-md font-bold text-slate-800 uppercase tracking-widest">${formatToothName(finding.tooth_position)}</h4>
+                                    <div class="flex items-center gap-2 mt-2 mb-4">
+                                        <span class="bg-red-100 text-red-700 font-bold px-3 py-1.5 leading-none rounded border border-red-200 text-xs tracking-wider uppercase inline-block">Detected: ${finding.label}</span>
+                                        <span class="bg-blue-50 text-blue-600 font-bold px-2 py-1.5 leading-none rounded border border-blue-100 text-xs inline-block">Conf: ${Math.round(finding.confidence * 100)}%</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 leading-relaxed text-justify">
+                                        Localized anatomical scan reveals structural anomaly consistent with <strong>${finding.label}</strong> positioned on the <strong>${formatToothName(finding.tooth_position)}</strong>. 
+                                        Refer to the microscopic region of interest (ROI) extraction for detailed visual verification.
+                                    </p>
+                                </div>
+                                <div class="flex gap-4 items-center justify-center shrink-0">
+                                    ${toothCrop ? `
+                                    <div class="flex flex-col items-center gap-2">
+                                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Isolated Tooth</span>
+                                        <img src="${toothCrop}" class="w-32 h-32 object-cover rounded-lg border border-slate-300 shadow-inner" alt="Tooth Crop">
+                                    </div>
+                                    ` : ''}
+                                    <div class="flex flex-col items-center gap-2">
+                                        <span class="text-[9px] font-bold text-red-500 uppercase tracking-widest">Specific Flaw ROI</span>
+                                        <img src="${flawCrop}" class="w-32 h-32 object-cover rounded-lg border border-red-400 shadow-md ring-2 ring-red-100" alt="Flaw Crop">
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        count++;
+                    }
+                    if (currentHtml) {
+                        blocks.push(currentHtml);
+                    }
+                }
+                return blocks;
+            };
 
             let modelsHtml = '';
             lastScanModelsInfo.forEach(info => {
@@ -1275,7 +1770,7 @@
                 modelsHtml += `
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 flex justify-between items-center shadow-sm">
                         <span class="font-bold text-slate-800">${info.displayName} Model</span>
-                        <span class="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded border border-emerald-200 tracking-wider uppercase">Accuracy: ${accDisplay}</span>
+                        <span class="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-1.5 leading-none rounded border border-emerald-200 tracking-wider uppercase inline-block">Accuracy: ${accDisplay}</span>
                     </div>
                 `;
             });
@@ -1283,13 +1778,163 @@
 
             let reportPagesHtml = '';
 
-            if (isBatchMode && batchResults.length > 0) {
-                batchResults.forEach((res, index) => {
+            // Ensure button text shows generating state
+            const exportBtn = document.getElementById('btnExportPDF');
+            const originalBtnHtml = exportBtn ? exportBtn.innerHTML : '';
+            if (exportBtn) {
+                exportBtn.innerHTML = `<svg class="animate-spin w-5 h-5 mr-2" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> GENERATING REPORT...`;
+                exportBtn.classList.add('opacity-75', 'pointer-events-none');
+            }
+
+            const coverPageHtml = `
+                <div class="bg-slate-900 text-white p-8 flex justify-between items-center border-b-4 border-blue-500">
+                    <div class="flex items-center gap-5">
+                        <img src="https://i.imgur.com/It3wa9i.png" alt="SmiloAI Logo" class="h-16 w-auto object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-black tracking-tight">SmiloAI Clinical Report ${isBatchMode ? '(BATCH)' : ''}</h1>
+                        <p class="text-blue-300 text-sm font-bold uppercase tracking-widest mt-1">Advanced Dental Detection AI</p>
+                    </div>
+                </div>
+                <div class="p-8 pb-0">
+                    <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200 mb-6">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Date of Scan</span>
+                            <span class="text-sm font-bold text-slate-900">${dateStr}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Analysis Mode</span>
+                            <span class="text-sm font-bold text-slate-900">AI Assisted (SmiloAI v5) ${isBatchMode ? '- BATCH' : ''}</span>
+                        </div>
+                    </div>
+                    <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        AI Specialists Deployed
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        ${modelsHtml}
+                    </div>
+                </div>
+            `;
+
+            try {
+                if (isBatchMode && batchResults.length > 0) {
+                    for (let index = 0; index < batchResults.length; index++) {
+                        const res = batchResults[index];
+                        let findingsHtml = '';
+                        if (res.summary_grouped && Object.keys(res.summary_grouped).length > 0) {
+                            for (const [tooth, findings] of Object.entries(res.summary_grouped)) {
+                                let cardsHtml = '';
+                                for (const [label, count] of Object.entries(findings)) {
+                                    cardsHtml += `
+                                        <div class="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 flex flex-col items-center justify-center shadow-sm">
+                                            <span class="text-3xl font-black text-slate-800">${count}</span>
+                                            <span class="text-xs text-slate-500 font-bold uppercase mt-1 tracking-wider">${label}</span>
+                                        </div>
+                                    `;
+                                }
+                                let headerHtml = '';
+                                if (tooth !== "General" || Object.keys(res.summary_grouped).length > 1) {
+                                    headerHtml = `<div class="col-span-full text-sm text-slate-500 uppercase tracking-widest font-bold border-b border-gray-200 pb-1 mb-2 mt-2 w-full text-left">${formatToothName(tooth)}</div>`;
+                                }
+                                findingsHtml += `
+                                    <div class="col-span-full">
+                                        ${headerHtml}
+                                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            ${cardsHtml}
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        } else if (res.summary && Object.keys(res.summary).length > 0) {
+                            for (const [label, count] of Object.entries(res.summary)) {
+                                findingsHtml += `
+                                    <div class="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 flex flex-col items-center justify-center shadow-sm">
+                                        <span class="text-3xl font-black text-slate-800">${count}</span>
+                                        <span class="text-xs text-slate-500 font-bold uppercase mt-1 tracking-wider">${label}</span>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            findingsHtml = '<div class="col-span-full text-emerald-600 font-bold p-4 bg-emerald-50 rounded-lg border border-emerald-200">Scan Clear: No anomalies detected.</div>';
+                        }
+
+                        let detailedBlocks = await buildDetailedHtml(res.detailed_findings, res.originalBase64);
+
+                        let aiBlockHtml = '';
+                        if (res.aiText) {
+                            aiBlockHtml = `
+                                <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2 mt-10">
+                                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2zM12 6c-2.8 0-5 2.2-5 5v3l-2 3v2h14v-2l-2-3v-3c0-2.8-2.2-5-5-5zM10 19h4v1a2 2 0 0 1-4 0v-1z"/></svg>
+                                    Recommended Treatment Plan
+                                </h2>
+                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm mb-10">
+                                    <p class="text-sm leading-relaxed text-emerald-900 text-justify whitespace-pre-line">${res.aiText}</p>
+                                </div>
+                            `;
+                        }
+
+                        reportPagesHtml += `
+                            ${index > 0 ? '</div><div class="page-break"></div>' : ''}
+                            <div class="scan-page bg-white">
+                            ${index === 0 ? coverPageHtml : ''}
+                            <div class="${index === 0 ? 'p-8 pt-0' : 'p-8'}">
+                            <div class="mb-8 border-b-2 border-slate-800 pb-2">
+                                <h2 class="text-2xl font-black text-slate-900">Scan Reference: ${res.filename}</h2>
+                                <p class="text-slate-500 text-sm">Image ${index + 1} of ${batchResults.length}</p>
+                                ${res.routedFlow ? `<span class="inline-block text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full border border-purple-200 mt-3">Auto-Routed Flow: ${res.routedFlow}</span>` : ''}
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                                    <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Original Input</span>
+                                    <img src="${res.originalBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Original Scan">
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
+                                    <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">AI Diagnostics Layer</span>
+                                    <img src="${res.processedBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Processed Scan">
+                                </div>
+                            </div>
+
+                            <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                                Diagnostic Findings Matrix
+                            </h2>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                ${findingsHtml}
+                            </div>
+                            </div>
+                        `;
+                        
+                        if (detailedBlocks && detailedBlocks.length > 0) {
+                            for (let j = 0; j < detailedBlocks.length; j++) {
+                                reportPagesHtml += `</div><div class="page-break"></div><div class="scan-page bg-white p-2">`;
+                                reportPagesHtml += detailedBlocks[j];
+                            }
+                        }
+                        
+                        // Start a new page for the AI block if it exists
+                        if (aiBlockHtml) {
+                            reportPagesHtml += `</div><div class="page-break"></div><div class="scan-page bg-white p-2">`;
+                            reportPagesHtml += aiBlockHtml;
+                        }
+                        
+                        if (index === batchResults.length - 1) {
+                            reportPagesHtml += `
+                                <div class="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400 bg-white pb-8">
+                                    Generated securely by SmiloAI. This is an AI-assisted diagnostic tool and does not replace professional medical judgment.<br>For clinical reference only.
+                                </div>
+                            </div></div>`;
+                        }
+                    }
+                } else {
+                    const processedImageBase64 = document.getElementById('mainDisplay').src;
+                    const aiTextHtml = document.getElementById('aiSummaryText').innerHTML;
+
                     let findingsHtml = '';
-                    if (!res.summary || Object.keys(res.summary).length === 0) {
-                        findingsHtml = '<div class="col-span-full text-emerald-600 font-bold p-4 bg-emerald-50 rounded-lg border border-emerald-200">Scan Clear: No anomalies detected.</div>';
-                    } else {
-                        for (const [label, count] of Object.entries(res.summary)) {
+                    
+                    if (window.lastSummary && Object.keys(window.lastSummary).length > 0) {
+                        for (const [label, count] of Object.entries(window.lastSummary)) {
                             findingsHtml += `
                                 <div class="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 flex flex-col items-center justify-center shadow-sm">
                                     <span class="text-3xl font-black text-slate-800">${count}</span>
@@ -1297,37 +1942,41 @@
                                 </div>
                             `;
                         }
+                    } else {
+                        findingsHtml = '<div class="col-span-full text-emerald-600 font-bold p-4 bg-emerald-50 rounded-lg border border-emerald-200">Scan Clear: No anomalies detected.</div>';
                     }
 
+                    let detailedBlocks = await buildDetailedHtml(window.lastDetailedFindings || [], originalImageBase64);
+
                     let aiBlockHtml = '';
-                    if (res.aiText) {
+                    if (aiTextHtml && aiTextHtml.trim() !== '') {
                         aiBlockHtml = `
-                            <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                            <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2 mt-10">
                                 <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2zM12 6c-2.8 0-5 2.2-5 5v3l-2 3v2h14v-2l-2-3v-3c0-2.8-2.2-5-5-5zM10 19h4v1a2 2 0 0 1-4 0v-1z"/></svg>
                                 Recommended Treatment Plan
                             </h2>
                             <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm mb-10">
-                                <p class="text-sm leading-relaxed text-emerald-900 text-justify">${res.aiText}</p>
+                                <p class="text-sm leading-relaxed text-emerald-900 text-justify whitespace-pre-line">${aiTextHtml}</p>
                             </div>
                         `;
                     }
 
-                    reportPagesHtml += `
-                        ${index > 0 ? '<div class="page-break"></div>' : ''}
-                        <div class="mb-8 border-b-2 border-slate-800 pb-2">
-                            <h2 class="text-2xl font-black text-slate-900">Scan Reference: ${res.filename}</h2>
-                            <p class="text-slate-500 text-sm">Image ${index + 1} of ${batchResults.length}</p>
-                            ${res.routedFlow ? `<span class="inline-block text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full border border-purple-200 mt-3">Auto-Routed Flow: ${res.routedFlow}</span>` : ''}
-                        </div>
+                    const scanTimeEl = document.getElementById('scanTime');
+                    const routedFlow = scanTimeEl.getAttribute('data-routed') || '';
 
+                    reportPagesHtml = `
+                        <div class="scan-page bg-white">
+                        ${coverPageHtml}
+                        <div class="p-8 pt-0">
+                        ${routedFlow ? `<div class="mb-6"><span class="inline-block text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full border border-purple-200">Auto-Routed Flow: ${routedFlow}</span></div>` : ''}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
                                 <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Original Input</span>
-                                <img src="${res.originalBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Original Scan">
+                                <img src="${originalImageBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Original Scan">
                             </div>
                             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
                                 <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">AI Diagnostics Layer</span>
-                                <img src="${res.processedBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Processed Scan">
+                                <img src="${processedImageBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Processed Scan">
                             </div>
                         </div>
 
@@ -1335,78 +1984,33 @@
                             <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                             Diagnostic Findings Matrix
                         </h2>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             ${findingsHtml}
                         </div>
-
-                        ${aiBlockHtml}
+                        </div>
                     `;
-                });
-            } else {
-                const processedImageBase64 = document.getElementById('mainDisplay').src;
-                const aiTextHtml = document.getElementById('aiSummaryText').innerHTML;
-
-                let findingsHtml = '';
-                const summaryListContainer = document.getElementById('scanSummaryList');
-                const uiItems = summaryListContainer.querySelectorAll('div.bg-white\\/5');
-
-                if (!uiItems || uiItems.length === 0) {
-                    findingsHtml = '<div class="col-span-full text-emerald-600 font-bold p-4 bg-emerald-50 rounded-lg border border-emerald-200">Scan Clear: No anomalies detected.</div>';
-                } else {
-                    uiItems.forEach(item => {
-                        const spans = item.querySelectorAll('span');
-                        if (spans.length >= 2) {
-                            const count = spans[0].innerText;
-                            const label = spans[1].innerText;
-                            findingsHtml += `
-                                <div class="bg-white border border-gray-200 border-l-4 border-l-blue-500 rounded-lg p-5 flex flex-col items-center justify-center shadow-sm">
-                                    <span class="text-3xl font-black text-slate-800">${count}</span>
-                                    <span class="text-xs text-slate-500 font-bold uppercase mt-1 tracking-wider">${label}</span>
-                                </div>
-                            `;
+                    
+                    if (detailedBlocks && detailedBlocks.length > 0) {
+                        for (let j = 0; j < detailedBlocks.length; j++) {
+                            reportPagesHtml += `</div><div class="page-break"></div><div class="scan-page bg-white p-2">`;
+                            reportPagesHtml += detailedBlocks[j];
                         }
-                    });
+                    }
+                    
+                    if (aiBlockHtml) {
+                        reportPagesHtml += `</div><div class="page-break"></div><div class="scan-page bg-white p-2">`;
+                        reportPagesHtml += aiBlockHtml;
+                    }
+                    
+                    
+                    reportPagesHtml += `
+                        <div class="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400 bg-white pb-8">
+                            Generated securely by SmiloAI. This is an AI-assisted diagnostic tool and does not replace professional medical judgment.<br>For clinical reference only.
+                        </div>
+                    </div></div>`;
                 }
-
-                let aiBlockHtml = '';
-                if (aiTextHtml && aiTextHtml.trim() !== '') {
-                    aiBlockHtml = `
-                        <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 1.1-.9 2-2 2s-2-.9-2-2a2 2 0 0 1 2-2zM12 6c-2.8 0-5 2.2-5 5v3l-2 3v2h14v-2l-2-3v-3c0-2.8-2.2-5-5-5zM10 19h4v1a2 2 0 0 1-4 0v-1z"/></svg>
-                            Recommended Treatment Plan
-                        </h2>
-                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm mb-10">
-                            <p class="text-sm leading-relaxed text-emerald-900 text-justify">${aiTextHtml}</p>
-                        </div>
-                    `;
-                }
-
-                const scanTimeEl = document.getElementById('scanTime');
-                const routedFlow = scanTimeEl.getAttribute('data-routed') || '';
-
-                reportPagesHtml = `
-                    ${routedFlow ? `<div class="mb-6"><span class="inline-block text-xs font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full border border-purple-200">Auto-Routed Flow: ${routedFlow}</span></div>` : ''}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
-                            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Original Input</span>
-                            <img src="${originalImageBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Original Scan">
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col items-center">
-                            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">AI Diagnostics Layer</span>
-                            <img src="${processedImageBase64}" class="max-w-full h-auto max-h-[400px] object-contain rounded-lg border border-slate-300 shadow-sm" alt="Processed Scan">
-                        </div>
-                    </div>
-
-                    <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                        Diagnostic Findings Matrix
-                    </h2>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                        ${findingsHtml}
-                    </div>
-
-                    ${aiBlockHtml}
-                `;
+            } catch (err) {
+                console.error("Error generating detailed HTML report", err);
             }
 
             const htmlContent = `<!DOCTYPE html>
@@ -1414,78 +2018,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmiloAi Clinical Report - ${isBatchMode ? 'BATCH' : patientId}</title>
+    <title>SmiloAI Clinical Report - ${isBatchMode ? 'BATCH' : patientId}</title>
     <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
     <style>
         body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         @media print {
-            body { background-color: white; }
+            body { 
+                background-color: white; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
             .print-hide { display: none !important; }
             .page-break { page-break-before: always; }
+            
+            /* Crucial fixes for PDF spacing */
+            .page-break-inside-avoid {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            /* Target all major blocks to prevent awkward cutting */
+            div.bg-white, .grid > div {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            h2, h3, h4 {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+            
+            img {
+                max-width: 100% !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
         }
     </style>
 </head>
 <body class="text-slate-800 p-4 md:p-8">
-    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-        <div class="bg-slate-900 text-white p-8 flex justify-between items-center border-b-4 border-blue-500">
-            <div class="flex items-center gap-5">
-                <img src="https://i.imgur.com/It3wa9i.png" alt="SmiloAi Logo" class="h-16 w-auto object-contain">
-                <div>
-                    <h1 class="text-3xl font-black tracking-tight">SmiloAi Clinical Report ${isBatchMode ? '(BATCH)' : ''}</h1>
-                    <p class="text-blue-300 text-sm font-bold uppercase tracking-widest mt-1">Advanced Dental Detection AI</p>
-                </div>
-            </div>
-            <button onclick="window.print()" class="print-hide bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-6 rounded-lg transition shadow-lg flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                Print / Save PDF
-            </button>
-        </div>
-
-        <div class="p-8">
-            <div class="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200 mb-10">
-                <div class="flex flex-col">
-                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Date of Scan</span>
-                    <span class="text-sm font-bold text-slate-900">${dateStr}</span>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Analysis Mode</span>
-                    <span class="text-sm font-bold text-slate-900">AI Assisted (SmiloAi v5) ${isBatchMode ? '- BATCH' : ''}</span>
-                </div>
-            </div>
-
-            <h2 class="text-lg font-black text-slate-900 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
-                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                AI Specialists Deployed
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-                ${modelsHtml}
-            </div>
-
-            <div class="page-break"></div>
-
-            ${reportPagesHtml}
-
-            <div class="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
-                Generated securely by SmiloAi Diagnostic Engine. This is an AI-assisted diagnostic tool and does not replace professional medical judgment.<br>For clinical reference only.
-            </div>
-        </div>
+    <div id="reportContent" class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+        ${reportPagesHtml}
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+    <script>
+        async function downloadPDF(btn) {
+            const btnText = document.getElementById('pdfBtnText');
+            
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                window.print();
+                return;
+            }
+            
+            if (btnText) btnText.innerText = "Processing PDF (0%)...";
+            if (btn) btn.classList.add('opacity-50', 'pointer-events-none');
+            
+            // Allow DOM to update button text before locking thread
+            setTimeout(async () => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'pt', 'letter');
+                    const pages = document.querySelectorAll('.scan-page');
+                    
+                    // Do NOT hide the button, so the user can see the live progress tracker.
+                    // We will use ignoreElements to hide it from the PDF rendering instead.
+                    
+                    for (let i = 0; i < pages.length; i++) {
+                        const pct = Math.round((i / pages.length) * 100);
+                        if (btnText) btnText.innerText = \`Processing PDF (\${pct}%)...\`;
+                        if (window.parent !== window) {
+                            window.parent.postMessage({ type: 'pdfProgress', percent: pct }, '*');
+                        }
+                        // Yield to let the DOM update the button text
+                        await new Promise(r => setTimeout(r, 20));
+                        
+                        const pageEl = pages[i];
+                        const canvas = await html2canvas(pageEl, { 
+                            scale: 1.5, 
+                            useCORS: true, 
+                            logging: false,
+                            ignoreElements: (el) => el.id === 'pdfBtn'
+                        });
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        
+                        if (i > 0) pdf.addPage();
+                        
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = pdf.internal.pageSize.getHeight();
+                        
+                        const margin = 20; // 20pt margin
+                        const renderWidth = pdfWidth - (margin * 2);
+                        const renderHeight = (canvas.height * renderWidth) / canvas.width;
+                        
+                        let availableHeight = pdfHeight - (margin * 2);
+                        let yPosition = margin;
+                        let heightLeft = renderHeight;
+                        
+                        pdf.addImage(imgData, 'JPEG', margin, yPosition, renderWidth, renderHeight);
+                        heightLeft -= availableHeight;
+                        
+                        while (heightLeft > 0) {
+                            pdf.addPage();
+                            yPosition -= availableHeight;
+                            pdf.addImage(imgData, 'JPEG', margin, yPosition, renderWidth, renderHeight);
+                            heightLeft -= availableHeight;
+                        }
+                    }
+                    
+                    const blob = pdf.output('blob');
+                    const pdfUrl = URL.createObjectURL(blob);
+                    
+                    if (window.parent !== window) {
+                        window.parent.postMessage({ type: 'pdfDone', url: pdfUrl }, '*');
+                    } else {
+                        window.open(pdfUrl, '_blank');
+                    }
+                } catch(err) {
+                    console.error(err);
+                    if (window.parent !== window) {
+                        window.parent.postMessage({ type: 'pdfError' }, '*');
+                    } else {
+                        alert('Error generating PDF. Falling back to native print.');
+                        window.print();
+                    }
+                } finally {
+                    if (btnText) btnText.innerText = "Print / Save PDF";
+                    if (btn) btn.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            }, 100);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.name === 'pdfIframe') {
+                downloadPDF(null);
+            }
+        });
+    <\/script>
 </body>
 </html>`;
 
             const blob = new Blob([htmlContent], { type: 'text/html' });
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `SmiloAi_Report_${isBatchMode ? 'BATCH' : patientId}.html`;
-            document.body.appendChild(a);
+            
+            if (!isPdfMode) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `SmiloAI_Report_${isBatchMode ? 'BATCH' : patientId}.html`;
+                document.body.appendChild(a);
+                a.click();
+                
+                if (reportTab) {
+                    reportTab.location.href = url;
+                } else {
+                    window.open(url, '_blank');
+                }
+                setTimeout(() => a.remove(), 100);
 
-            a.click();
+                // Update UI to show success
+                const btn = document.getElementById('btnExportPDF');
+                if (btn) {
+                    btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> SAVED & OPENED!`;
+                    btn.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+                    btn.classList.remove('bg-blue-500/10', 'text-blue-300', 'border-blue-500/30', 'opacity-75', 'pointer-events-none');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalBtnHtml;
+                        btn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+                        btn.classList.add('bg-blue-500/10', 'text-blue-300', 'border-blue-500/30');
+                    }, 3000);
+                }
+            } else {
+                // PDF Mode via Iframe
+                const iframe = document.createElement('iframe');
+                iframe.name = 'pdfIframe';
+                iframe.style.position = 'absolute';
+                iframe.style.left = '-9999px';
+                iframe.style.width = '1024px';
+                iframe.style.height = '1000px';
+                
+                let startTime = Date.now();
+                const messageHandler = (event) => {
+                    if (event.data.type === 'pdfProgress') {
+                        const pct = event.data.percent;
+                        document.getElementById('pdfExportProgressBg').style.width = pct + '%';
+                        
+                        let etaText = "Calculating...";
+                        if (pct > 0) {
+                            const elapsed = Date.now() - startTime;
+                            const totalEst = elapsed / (pct / 100);
+                            const remaining = Math.max(0, totalEst - elapsed);
+                            const sec = Math.ceil(remaining / 1000);
+                            
+                            if (sec > 60) {
+                                etaText = `~${Math.ceil(sec/60)} min remaining`;
+                            } else {
+                                etaText = `~${sec} sec remaining`;
+                            }
+                        }
+                        
+                        document.getElementById('pdfExportTitle').innerText = `Rendering PDF (${pct}%)`;
+                        document.getElementById('pdfExportDesc').innerText = `Heavy visual extraction in progress. ${etaText}`;
+                    } else if (event.data.type === 'pdfDone') {
+                        window.removeEventListener('message', messageHandler);
+                        setTimeout(() => iframe.remove(), 1000);
+                        document.getElementById('pdfExportTitle').innerText = 'Success!';
+                        document.getElementById('pdfExportDesc').innerText = 'PDF opened successfully.';
+                        document.getElementById('closeExportModalBtn').innerText = 'Close';
+                        const btnExport = document.getElementById('btnExportPDF');
+                        if (btnExport) {
+                            btnExport.innerHTML = originalBtnHtml;
+                            btnExport.classList.remove('opacity-75', 'pointer-events-none');
+                        }
+                        
+                        if (event.data.url) {
+                            const a = document.createElement('a');
+                            a.href = event.data.url;
+                            a.target = '_blank';
+                            document.body.appendChild(a);
+                            a.click();
+                            setTimeout(() => a.remove(), 100);
+                        }
+                    } else if (event.data.type === 'pdfError') {
+                        window.removeEventListener('message', messageHandler);
+                        setTimeout(() => iframe.remove(), 1000);
+                        document.getElementById('pdfExportTitle').innerText = 'Error';
+                        document.getElementById('pdfExportDesc').innerText = 'Failed to generate PDF. Check console.';
+                        document.getElementById('closeExportModalBtn').innerText = 'Close';
+                        const btnExport = document.getElementById('btnExportPDF');
+                        if (btnExport) {
+                            btnExport.innerHTML = originalBtnHtml;
+                            btnExport.classList.remove('opacity-75', 'pointer-events-none');
+                        }
+                    }
+                };
+                window.addEventListener('message', messageHandler);
+                
+                document.body.appendChild(iframe);
+                iframe.src = url;
+            }
 
-            setTimeout(() => {
-                a.remove();
-                window.URL.revokeObjectURL(url);
-            }, 1000);
+            // Revoke after 60 seconds
+            setTimeout(() => window.URL.revokeObjectURL(url), 60000);
         }
 
         // Modal Handlers: State Clearing
@@ -1584,6 +2359,30 @@
             const modal = document.getElementById('batchWarningModal');
             const box = document.getElementById('batchWarningBox');
             modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function showNoModelsModal() {
+            const modal = document.getElementById('noModelsModal');
+            const box = document.getElementById('noModelsBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+                box.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeNoModelsModal() {
+            const modal = document.getElementById('noModelsModal');
+            const box = document.getElementById('noModelsBox');
+            modal.classList.add('opacity-0');
+            box.classList.remove('scale-100');
             box.classList.add('scale-95');
             setTimeout(() => {
                 modal.classList.add('hidden');
@@ -1848,7 +2647,7 @@
             }
 
             if (errors.length > 0) {
-                document.getElementById('flowValidationMsg').innerHTML = errors.join("<br><br>");
+                document.getElementById('flowValidationMsg').innerHTML = errors.map(e => escapeHTML(e)).join("<br><br>");
                 showFlowValidationWarning();
                 return;
             }
@@ -2428,6 +3227,10 @@
                     disabledModels.delete(modelName);
                     saveSettings();
                     addModelToActiveUI(modelName, selectedMode);
+                    
+                    if (typeof updateDentalPositionToggleState === 'function') {
+                        updateDentalPositionToggleState();
+                    }
 
                     const parentDiv = btnElement.parentElement;
                     parentDiv.innerHTML = `<div class="flex items-center gap-3">
@@ -2527,6 +3330,8 @@
         }
 
         function addModelToActiveUI(name, mode) {
+            if (name.includes('DENTALPOSITION')) return;
+
             const listId = mode === 'rgb' ? 'rgbModelList' : 'xrayModelList';
             const list = document.getElementById(listId);
             const activeColor = mode === 'rgb' ? 'blue' : 'purple';
@@ -2605,13 +3410,13 @@
                     eventSource.close();
                     loader.classList.add('hidden');
                     textEl.classList.remove('hidden');
-                    textEl.innerHTML = `<span class="text-red-400">${event.data.replace("[ERROR] ", "")}</span>`;
+                    textEl.innerHTML = `<span class="text-red-400">${escapeHTML(event.data.replace("[ERROR] ", ""))}</span>`;
                 } else {
                     if (!loader.classList.contains('hidden')) {
                         loader.classList.add('hidden');
                         textEl.classList.remove('hidden');
                     }
-                    textEl.innerHTML += event.data;
+                    textEl.innerHTML += escapeHTML(event.data);
                 }
             };
 
@@ -2657,9 +3462,13 @@
                     return modelName;
                 }).join(',');
 
-                if (!activeModels) {
+                const dpToggle = document.getElementById('dentalPositionToggle');
+                const isDpActive = dpToggle && dpToggle.checked && !dpToggle.disabled;
+
+                if (!activeModels && !isDpActive) {
                     toggleSettings();
-                    return alert(`No active models selected in the settings. Please toggle at least one model ON.`);
+                    showNoModelsModal();
+                    return;
                 }
             } else {
                 if (apEnabled && !apModel) {
@@ -2741,6 +3550,11 @@
             formData.append("active_models", activeModels);
             formData.append("mode", activeCategory);
             formData.append("pipeline_mode", pipelineMode);
+            
+            const dpToggle = document.getElementById('dentalPositionToggle');
+            if (dpToggle) {
+                formData.append("use_dental_position", dpToggle.checked);
+            }
 
             // Dispatch graph state to backend
             if (pipelineMode === "custom") {
@@ -2781,6 +3595,8 @@
 
                     const summaryContainer = document.getElementById('scanSummaryContainer');
                     const summaryList = document.getElementById('scanSummaryList');
+                    window.lastDetailedFindings = data.detailed_findings || [];
+                    window.lastSummary = data.summary || {};
 
                     // Update UI with auto-routed flow
                     if (data.routed_flow) {
@@ -2792,14 +3608,51 @@
 
                     summaryList.innerHTML = '';
 
-                    if (data.summary && Object.keys(data.summary).length > 0) {
+                    if (data.summary_grouped && Object.keys(data.summary_grouped).length > 0) {
+                        let detectionArray = [];
+                        for (const [tooth, findings] of Object.entries(data.summary_grouped)) {
+                            let cardsHtml = '';
+                            for (const [label, count] of Object.entries(findings)) {
+                                cardsHtml += `
+                                    <div class="bg-white/5 rounded-xl p-3 border border-white/10 flex flex-col items-center justify-center text-center shadow-inner">
+                                        <span class="text-3xl font-bold text-white mb-1 drop-shadow-md">${count}</span>
+                                        <span class="text-[10px] text-emerald-400 uppercase tracking-widest font-semibold">${escapeHTML(label)}</span>
+                                    </div>`;
+                                if (tooth === "General") {
+                                    detectionArray.push(`${count} ${label}`);
+                                } else {
+                                    detectionArray.push(`${count} ${label} (${tooth})`);
+                                }
+                            }
+                            
+                            let headerHtml = '';
+                            if (tooth !== "General" || Object.keys(data.summary_grouped).length > 1) {
+                                headerHtml = `<div class="text-xs text-purple-300 uppercase tracking-widest font-bold border-b border-white/10 pb-1 mb-3 text-left w-full">${escapeHTML(tooth)}</div>`;
+                            }
+                            
+                            summaryList.innerHTML += `
+                                <div class="col-span-full mb-2">
+                                    ${headerHtml}
+                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        ${cardsHtml}
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        summaryContainer.classList.remove('hidden');
+
+                        if (aiEnabled) {
+                            startAiSummaryStream(detectionArray.join(', '), activeCategory);
+                        }
+                    } else if (data.summary && Object.keys(data.summary).length > 0) {
                         let detectionArray = [];
                         for (const [label, count] of Object.entries(data.summary)) {
                             detectionArray.push(`${count} ${label}`);
                             summaryList.innerHTML += `
                                 <div class="bg-white/5 rounded-xl p-3 border border-white/10 flex flex-col items-center justify-center text-center shadow-inner">
                                     <span class="text-3xl font-bold text-white mb-1 drop-shadow-md">${count}</span>
-                                    <span class="text-[10px] text-emerald-400 uppercase tracking-widest font-semibold">${label}</span>
+                                    <span class="text-[10px] text-emerald-400 uppercase tracking-widest font-semibold">${escapeHTML(label)}</span>
                                 </div>`;
                         }
 
@@ -2929,7 +3782,18 @@
 
                         if (useLLM) {
                             let detectionArray = [];
-                            if (data.summary && Object.keys(data.summary).length > 0) {
+                            if (data.summary_grouped && Object.keys(data.summary_grouped).length > 0) {
+                                for (const [tooth, findings] of Object.entries(data.summary_grouped)) {
+                                    for (const [label, count] of Object.entries(findings)) {
+                                        if (tooth === "General") {
+                                            detectionArray.push(`${count} ${label}`);
+                                        } else {
+                                            detectionArray.push(`${count} ${label} (${tooth})`);
+                                        }
+                                    }
+                                }
+                                aiFinalText = await fetchAiSummarySilently(detectionArray.join(', '), activeCategory);
+                            } else if (data.summary && Object.keys(data.summary).length > 0) {
                                 for (const [label, count] of Object.entries(data.summary)) {
                                     detectionArray.push(`${count} ${label}`);
                                 }
@@ -2944,6 +3808,8 @@
                             originalBase64: originalBase64,
                             processedBase64: data.image_base64,
                             summary: data.summary || {},
+                            summary_grouped: data.summary_grouped || {},
+                            detailed_findings: data.detailed_findings || [],
                             aiText: aiFinalText,
                             routedFlow: data.routed_flow // Store routed flow metadata
                         });
@@ -2985,7 +3851,7 @@
                 }
 
                 try {
-                    exportClinicalReport();
+                    // Do nothing here, wait for the user to explicitly press the button
                 } catch(e) {
                     console.log("Auto-download blocked by browser security.");
                 }
@@ -3299,6 +4165,427 @@
             }, 1500);
         }
 
-    </script>
+    
+// === DEVICE HUB LOGIC ===
+        let mobilePollingInterval = null;
+        let lastUploadId = null;
+        
+        let currentWebcamStream = null;
+
+        function openDeviceHubModal() {
+            const modal = document.getElementById('deviceHubModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            showDhView('dh-menu');
+            
+            // Initialize upload ID
+            initMobileUploadId();
+        }
+
+        function closeDeviceHubModal() {
+            const modal = document.getElementById('deviceHubModal');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            
+            if (mobilePollingInterval) clearInterval(mobilePollingInterval);
+            if (connectedDevicesInterval) clearInterval(connectedDevicesInterval);
+            stopWebcam();
+        }
+
+        async function initMobileUploadId() {
+            try {
+                const res = await fetch(`${API_URL}/check_mobile_upload?init=true&t=${Date.now()}`);
+                const data = await res.json();
+                lastUploadId = data.upload_id || "";
+            } catch (err) {
+                lastUploadId = "";
+            }
+        }
+
+        function showDhView(viewId) {
+            // Hide all views
+            ['dh-menu', 'dh-wifi', 'dh-usb', 'dh-dslr'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(id).classList.remove('flex');
+            });
+            // Show target view
+            document.getElementById(viewId).classList.remove('hidden');
+            document.getElementById(viewId).classList.add('flex');
+            
+            // Manage Polling & Webcams based on view
+            if (mobilePollingInterval) clearInterval(mobilePollingInterval);
+            if (connectedDevicesInterval) clearInterval(connectedDevicesInterval);
+            stopWebcam();
+            
+            if (viewId === 'dh-wifi') {
+                generateWifiQr();
+                mobilePollingInterval = setInterval(() => checkMobileUpload('.wifiPollingStatus'), 1500);
+                checkConnectedDevices();
+                connectedDevicesInterval = setInterval(checkConnectedDevices, 2000);
+            } else if (viewId === 'dh-usb') {
+                populateWebcams();
+            }
+        }
+
+        async function generateWifiQr() {
+            try {
+                const response = await fetch(`${API_URL}/get_qr_codes?ssid=&password=`);
+                const data = await response.json();
+                document.getElementById('qrCodeUrlContainer_wifi').innerHTML = `<img src="${data.url_qr}" class="w-full h-full object-contain rounded-lg" alt="URL QR">`;
+            } catch (err) {
+                console.error("Failed to fetch WiFi URL QR", err);
+            }
+        }
+
+        // --- WEBCAM LOGIC ---
+        let activeWebcams = {}; // deviceId -> MediaStream
+
+        async function populateWebcams() {
+            const container = document.getElementById('webcamGrid');
+            if(!container) return;
+            container.innerHTML = '<div class="text-white col-span-full">Loading cameras...</div>';
+            
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                
+                if (videoDevices.length === 0) {
+                    container.innerHTML = '<div class="text-white col-span-full">No cameras found</div>';
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                for (let d of videoDevices) {
+                    const id = d.deviceId;
+                    const card = document.createElement('div');
+                    card.className = 'relative bg-black rounded-xl overflow-hidden border-2 border-slate-700 shadow-xl';
+                    card.innerHTML = `
+                        <video id="vid_${id}" class="w-full h-48 object-cover" autoplay playsinline></video>
+                        <div class="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-xs text-white truncate max-w-[80%]">${d.label || 'Camera'}</div>
+                        <div class="absolute top-2 right-2">
+                            <button id="toggle_${id}" onclick="toggleWebcam('${id}')" class="bg-emerald-500 hover:bg-emerald-400 text-white text-xs px-3 py-1 rounded-full shadow-md font-bold transition">ON</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                    
+                    // start it by default
+                    startSingleWebcam(id);
+                }
+            } catch (err) {
+                console.error("Webcam access error:", err);
+                container.innerHTML = '<div class="text-red-400 col-span-full">Permission Denied / Error</div>';
+            }
+        }
+
+        async function startSingleWebcam(deviceId) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: deviceId } }
+                });
+                activeWebcams[deviceId] = stream;
+                document.getElementById(`vid_${deviceId}`).srcObject = stream;
+            } catch (err) {
+                console.error("Failed to start webcam", err);
+            }
+        }
+        
+        function stopSingleWebcam(deviceId) {
+            if (activeWebcams[deviceId]) {
+                activeWebcams[deviceId].getTracks().forEach(t => t.stop());
+                delete activeWebcams[deviceId];
+                const vid = document.getElementById(`vid_${deviceId}`);
+                if (vid) vid.srcObject = null;
+            }
+        }
+
+        function toggleWebcam(deviceId) {
+            const btn = document.getElementById(`toggle_${deviceId}`);
+            if (activeWebcams[deviceId]) {
+                stopSingleWebcam(deviceId);
+                btn.innerText = "OFF";
+                btn.className = "bg-gray-500 hover:bg-gray-400 text-white text-xs px-3 py-1 rounded-full shadow-md font-bold transition";
+            } else {
+                startSingleWebcam(deviceId);
+                btn.innerText = "ON";
+                btn.className = "bg-emerald-500 hover:bg-emerald-400 text-white text-xs px-3 py-1 rounded-full shadow-md font-bold transition";
+            }
+        }
+
+        function stopWebcam() {
+            // Stop all
+            for (let id in activeWebcams) {
+                stopSingleWebcam(id);
+            }
+        }
+
+        function captureWebcamFrame() {
+            let capturedCount = 0;
+            for (let id in activeWebcams) {
+                const video = document.getElementById(`vid_${id}`);
+                if (!video || !video.videoWidth) continue;
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // We use synchronous dataURL for simplicity in the loop
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+                const blob = dataURItoBlob(dataUrl);
+                const file = new File([blob], `webcam_${id}_${Date.now()}.jpg`, { type: "image/jpeg" });
+                
+                stagedFiles.push(file);
+                capturedCount++;
+            }
+            
+            if (capturedCount > 0) {
+                updateStagedUI();
+                // We don't close the modal, we let them analyze batch!
+            }
+        }
+        // === END DEVICE HUB LOGIC ===
+
+
+
+        // --- STAGING & BATCH LOGIC ---
+        let stagedFiles = [];
+
+        function dataURItoBlob(dataURI) {
+            var byteString = atob(dataURI.split(',')[1]);
+            var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            var ab = new ArrayBuffer(byteString.length);
+            var ia = new Uint8Array(ab);
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ab], {type: mimeString});
+        }
+
+        let connectedDevicesInterval = null;
+
+        async function checkConnectedDevices() {
+            try {
+                const res = await fetch(`${API_URL}/connected_devices?t=${Date.now()}`);
+                const data = await res.json();
+                
+                const container = document.getElementById('connectedDevicesContainer');
+                if (!container) return;
+                
+                if (data.devices.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-gray-500 text-sm flex items-center gap-2">
+                            <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            Waiting for connection...
+                        </div>`;
+                } else {
+                    let html = '';
+                    data.devices.forEach(d => {
+                        html += `
+                        <div class="bg-blue-500/20 border border-blue-500/50 text-blue-300 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 w-full justify-center shadow-lg shadow-blue-500/20 mb-2 transition-all">
+                            ${d.name} Connected
+                            <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse ml-2"></div>
+                        </div>`;
+                    });
+                    container.innerHTML = html;
+                }
+            } catch (err) {}
+        }
+
+        async function checkMobileUpload(statusSelector = '#status') {
+            if (lastUploadId === null) return;
+
+            try {
+                const res = await fetch(`${API_URL}/check_mobile_upload?last_id=${lastUploadId}&t=${Date.now()}`);
+                const data = await res.json();
+
+                if (data.status === 'success' && data.images && data.images.length > 0) {
+                    lastUploadId = data.images[data.images.length - 1].id;
+
+                    for (let img of data.images) {
+                        const blob = dataURItoBlob(img.image_base64);
+                        const file = new File([blob], `mobile_${img.id}.jpg`, { type: "image/jpeg" });
+                        stagedFiles.push(file);
+                    }
+                    updateStagedUI();
+                }
+            } catch (err) {
+                console.error("Polling error", err);
+            }
+        }
+
+        function updateStagedUI() {
+            const bar = document.getElementById('stagedPhotosBar');
+            const count = document.getElementById('stagedCount');
+            if (stagedFiles.length > 0) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+                count.innerText = `${stagedFiles.length} Photos Received`;
+            } else {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+        }
+
+        function analyzeBatch() {
+            if (stagedFiles.length === 0) return;
+
+            const dataTransfer = new DataTransfer();
+            stagedFiles.forEach(f => dataTransfer.items.add(f));
+
+            document.getElementById('imageInput').files = dataTransfer.files;
+            closeDeviceHubModal();
+            // Pass the input element directly
+            handleImageUpload(document.getElementById('imageInput'));
+
+            // clear staging
+            stagedFiles = [];
+            updateStagedUI();
+        }
+
+        // Global Drag & Drop & Paste Listeners
+        window.addEventListener('paste', e => {
+            const items = e.clipboardData.items;
+            const files = [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    files.push(items[i].getAsFile());
+                }
+            }
+            if (files.length > 0) {
+                const dt = new DataTransfer();
+                files.forEach(f => dt.items.add(f));
+                const imageInput = document.getElementById('imageInput');
+                imageInput.files = dt.files;
+                handleImageUpload(imageInput);
+            }
+        });
+
+        window.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        window.addEventListener('drop', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const imageInput = document.getElementById('imageInput');
+                imageInput.files = e.dataTransfer.files;
+                handleImageUpload(imageInput);
+            }
+        });
+</script>
+
+    <div id="deviceHubModal" class="fixed inset-0 z-[80] bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center p-6 opacity-0 transition-opacity duration-300 overflow-y-auto">
+        <div class="glass-panel p-8 rounded-3xl max-w-2xl w-full mx-auto border border-blue-500/30 text-center relative shadow-[0_0_50px_rgba(59,130,246,0.3)] my-8">
+            <button onclick="closeDeviceHubModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <h3 class="text-3xl font-bold text-blue-400 mb-2">Connect Camera Devices</h3>
+            <p class="text-gray-300 text-sm mb-8">Select your preferred method to capture or stream photos directly into SmiloAI.</p>
+            
+            <!-- Grid Selection Menu -->
+            <div id="dh-menu" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <button onclick="showDhView('dh-wifi')" class="bg-slate-800/60 border border-slate-600 hover:border-blue-400 hover:bg-slate-700 p-6 rounded-2xl flex flex-col items-center text-center transition-all group">
+                    <div class="bg-blue-500/20 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
+                    </div>
+                    <h4 class="text-lg font-bold text-white mb-2">Local Wi-Fi</h4>
+                    <p class="text-xs text-gray-400">Use this if your smartphone and laptop are already connected to the same clinic Wi-Fi network.</p>
+                </button>
+
+                
+
+                <button onclick="showDhView('dh-usb')" class="bg-slate-800/60 border border-slate-600 hover:border-emerald-400 hover:bg-slate-700 p-6 rounded-2xl flex flex-col items-center text-center transition-all group">
+                    <div class="bg-emerald-500/20 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h4 class="text-lg font-bold text-white mb-2">USB Webcams</h4>
+                    <p class="text-xs text-gray-400">Live view for Intraoral Cameras, standard webcams, or DSLRs connected via HDMI Capture Cards.</p>
+                </button>
+
+                <button onclick="showDhView('dh-dslr')" class="bg-slate-800/60 border border-slate-600 hover:border-amber-400 hover:bg-slate-700 p-6 rounded-2xl flex flex-col items-center text-center transition-all group md:col-span-2 max-w-sm mx-auto w-full">
+                    <div class="bg-amber-500/20 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h4 class="text-lg font-bold text-white mb-2">Professional DSLR Tether</h4>
+                    <p class="text-xs text-gray-400">For connecting standard DSLR cameras directly via their native USB tethering software (EOS Utility, etc).</p>
+                </button>
+            </div>
+
+            <!-- View 1: Local Wi-Fi -->
+            <div id="dh-wifi" class="hidden flex-col items-center">
+                <button onclick="showDhView('dh-menu')" class="self-start text-blue-400 hover:text-white mb-4 flex items-center text-sm font-bold"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back</button>
+                <h4 class="text-xl font-bold text-white mb-4">Local Wi-Fi Connection</h4>
+                <p class="text-sm text-gray-400 mb-6 max-w-md">Ensure your phone and laptop are on the same Wi-Fi network. Scan this code with your phone's camera.</p>
+                <div class="bg-white p-3 rounded-2xl inline-block shadow-xl mb-4">
+                    <div id="qrCodeUrlContainer_wifi" class="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-sm">Loading...</div>
+                </div>
+
+                <div id="connectedDevicesContainer" class="mt-4 flex flex-col items-center gap-2 w-full max-w-xs">
+                    <!-- Dynamic devices go here -->
+                </div>
+                
+                <div class="text-blue-400 text-sm animate-pulse flex items-center justify-center gap-2 mt-4 hidden" id="wifiPollingStatus">
+                    <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Waiting for smartphone upload...
+                </div>
+            </div>
+
+            <!-- View 2: Removed -->
+            <!-- View 3: USB Webcam -->
+            <div id="dh-usb" class="hidden flex-col items-center w-full">
+                <div class="flex justify-between w-full mb-4">
+                    <button onclick="stopWebcam(); showDhView('dh-menu')" class="text-emerald-400 hover:text-white flex items-center text-sm font-bold"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back</button>
+                </div>
+                
+                <div id="webcamGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl mb-6 max-h-[50vh] overflow-y-auto p-2">
+                    <!-- Dynamic video feeds injected here -->
+                </div>
+
+                <button onclick="captureWebcamFrame()" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-4 px-12 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] transition-all transform hover:scale-105 flex items-center gap-2 text-xl">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    Capture Scans
+                </button>
+            </div>
+
+            <!-- View 4: DSLR -->
+            <div id="dh-dslr" class="hidden flex-col items-center w-full max-w-2xl mx-auto">
+                <button onclick="showDhView('dh-menu')" class="self-start text-amber-400 hover:text-white mb-4 flex items-center text-sm font-bold"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg> Back</button>
+                <h4 class="text-xl font-bold text-white mb-4">Professional DSLR Tethering</h4>
+                
+                <div class="bg-slate-800/80 p-6 rounded-2xl border border-slate-700 text-left mb-8">
+                    <ol class="list-decimal list-inside text-gray-300 space-y-3 text-sm">
+                        <li>Connect your DSLR to this computer via USB cable.</li>
+                        <li>Open your camera's native tethering software (e.g. <strong>EOS Utility</strong>, <strong>Sony Imaging Edge</strong>).</li>
+                        <li>Configure the software to automatically download captured photos to a specific "Watch Folder" on your computer.</li>
+                        <li>Click the button below to browse to that folder and select your captured images.</li>
+                    </ol>
+                </div>
+
+                <label for="imageInput" onclick="closeDeviceHubModal()" class="cursor-pointer bg-amber-500 hover:bg-amber-400 text-white font-bold py-4 px-12 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.3)] transition-all flex items-center gap-2 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Browse Watch Folder
+                </label>
+            </div>
+
+            <!-- Sticky Bottom Bar for Staged Photos -->
+            <div id="stagedPhotosBar" class="mt-8 pt-6 border-t border-slate-700 flex justify-between items-center hidden">
+                <div class="text-left">
+                    <span class="block text-sm text-gray-400 font-bold uppercase tracking-wider">Queue</span>
+                    <span id="stagedCount" class="text-3xl font-bold text-emerald-400">0 Photos Received</span>
+                </div>
+                <button onclick="analyzeBatch()" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold py-3 px-8 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all flex items-center gap-2 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Analyze Batch
+                </button>
+            </div>
+
+            
+        </div>
+    </div>
 </body>
 </html>
