@@ -4,12 +4,13 @@
   <img src="Sourcecodes/logo.png" width="150" alt="SmiloAI Logo">
 </p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com)
-[![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-CPU%20Inference-005ced.svg)](https://onnxruntime.ai/)
-[![Ultralytics YOLO](https://img.shields.io/badge/Ultralytics-YOLOv8-blueviolet.svg)](https://ultralytics.com)
-[![CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-1f6feb.svg)](https://github.com/TomSchimansky/CustomTkinter)
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"></a>
+  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.100+-00a393.svg" alt="FastAPI"></a>
+  <a href="https://onnxruntime.ai/"><img src="https://img.shields.io/badge/ONNX%20Runtime-CPU%20Inference-005ced.svg" alt="ONNX Runtime"></a>
+  <a href="https://ultralytics.com"><img src="https://img.shields.io/badge/Ultralytics-YOLOv8-blueviolet.svg" alt="Ultralytics YOLO"></a>
+</p>
 
 ---
 
