@@ -85,8 +85,8 @@ for _env_path in (os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env
 
 # Cloud and API configuration (Load from environment or fallback to safe placeholders)
 # Cloud Proxy Configuration
-PROXY_URL = os.getenv("PROXY_URL", "https://smiloai-cloud-proxy.onrender.com")
-PROXY_SECRET = os.getenv("PROXY_SECRET", "smiloai-secure-proxy-key-2024")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+DROPBOX_ACCESS_TOKEN = os.getenv("DROPBOX_ACCESS_TOKEN", "")
 
 
 
@@ -351,8 +351,8 @@ async def favicon():
 @app.get("/generate_ai_summary_stream")
 async def generate_ai_summary_stream(detections: str, mode: str = "xray"):
     def event_stream():
-        if not PROXY_URL:
-            yield "data: [ERROR] Proxy URL is not configured.\n\n"
+        if not GROQ_API_KEY:
+            yield "data: [ERROR] Valid GROQ_API_KEY required for AI Clinical Assistant.\n\n"
             return
 
         try:
@@ -366,26 +366,39 @@ async def generate_ai_summary_stream(detections: str, mode: str = "xray"):
                 f"Do not use markdown formatting (* or #), just plain readable text."
             )
 
-            proxy_endpoint = f"{PROXY_URL.rstrip('/')}/api/llm/stream"
-            headers = {"X-Proxy-Secret": PROXY_SECRET, "Content-Type": "application/json"}
+            import json
+            groq_endpoint = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
             payload = {
-                "model": "openai/gpt-oss-20b",
-                "messages": [
-                    {"role": "user", "content": prompt}
-                ],
+                "model": "llama3-8b-8192",
+                "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.5,
-                "max_tokens": 1024
+                "max_tokens": 1024,
+                "stream": True
             }
 
-            with requests.post(proxy_endpoint, headers=headers, json=payload, stream=True) as response:
+            with requests.post(groq_endpoint, headers=headers, json=payload, stream=True) as response:
                 if response.status_code != 200:
-                    yield f"data: [ERROR] Cloud Proxy failed: {response.text}\n\n"
+                    yield f"data: [ERROR] AI Engine failed: {response.text}\n\n"
                     return
                 
-                for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
-                    if chunk:
-                        clean_chunk = chunk.replace('\n', '<br>')
-                        yield f"data: {clean_chunk}\n\n"
+                for line in response.iter_lines(decode_unicode=True):
+                    if line:
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            if data_str == "[DONE]":
+                                yield "data: [DONE]\n\n"
+                                break
+                            try:
+                                json_data = json.loads(data_str)
+                                if "choices" in json_data and len(json_data["choices"]) > 0:
+                                    delta = json_data["choices"][0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        clean_chunk = content.replace('\n', '<br>')
+                                        yield f"data: {clean_chunk}\n\n"
+                            except Exception:
+                                pass
 
             yield "data: [DONE]\n\n"
 
@@ -450,18 +463,21 @@ async def get_engine_state():
 
     available_models = []
     try:
-        if PROXY_URL:
-            proxy_endpoint = f"{PROXY_URL.rstrip('/')}/api/models/sync"
-            headers = {"X-Proxy-Secret": PROXY_SECRET}
-            print("Connecting to SmiloAI Cloud Proxy for federated updates...")
-            response = requests.get(proxy_endpoint, headers=headers)
+        if DROPBOX_ACCESS_TOKEN:
+            try:
+                import dropbox
+            except ImportError:
+                print("dropbox module not found. Run pip install dropbox.")
+                dropbox = None
             
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "success":
-                    remote_models = data.get("models", [])
-                    for model_info in remote_models:
-                        clean_name = model_info["name"].replace(" ", "_")
+            if dropbox:
+                print("Connecting to Federated Cloud Databanks...")
+                dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
+                folder_path = '/SmiloAI_Models'
+                result = dbx.files_list_folder(folder_path)
+                for entry in result.entries:
+                    if isinstance(entry, dropbox.files.FileMetadata) and (entry.name.endswith('.onnx') or entry.name.endswith('.pt')):
+                        clean_name = entry.name.replace(" ", "_")
                         available_models.append(clean_name)
     except Exception as e:
         print(f"Failed to synchronize federated models via proxy: {e}")
@@ -625,50 +641,48 @@ async def download_cloud_model_stream(model_name: str):
             yield f"data: ERROR:Model already loaded.\n\n"
             return
         try:
-            if PROXY_URL:
-                proxy_endpoint = f"{PROXY_URL.rstrip('/')}/api/models/sync"
-                headers = {"X-Proxy-Secret": PROXY_SECRET}
-                response = requests.get(proxy_endpoint, headers=headers, timeout=10)
-                
-                if response.status_code != 200:
-                    yield f"data: ERROR:Failed to contact cloud databanks.\n\n"
+            if DROPBOX_ACCESS_TOKEN:
+                try:
+                    import dropbox
+                except ImportError:
+                    yield "data: ERROR:dropbox module not found.\n\n"
                     return
                 
-                data = response.json()
-                remote_models = data.get("models", [])
+                dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
+                folder_path = '/SmiloAI_Models'
+                result = dbx.files_list_folder(folder_path)
                 
-                target_url = None
+                target_path = None
                 total_size = 0
-                for model_info in remote_models:
-                    if model_info["name"].replace(" ", "_") == clean_name:
-                        target_url = model_info["url"]
-                        total_size = model_info["size"]
+                for entry in result.entries:
+                    if isinstance(entry, dropbox.files.FileMetadata) and entry.name.replace(" ", "_") == clean_name:
+                        target_path = entry.path_lower
+                        total_size = entry.size
                         break
                         
-                if not target_url:
+                if not target_path:
                     yield f"data: ERROR:Model '{clean_name}' not found in cloud databanks.\n\n"
                     return
                     
-                with requests.get(target_url, stream=True, timeout=15) as r:
-                    r.raise_for_status()
-                    downloaded = 0
-                    with open(file_path, 'wb') as f:
-                        for chunk in r.iter_content(chunk_size=1024 * 256):
-                            if chunk:
-                                f.write(chunk)
-                                downloaded += len(chunk)
-                                if total_size > 0:
-                                    progress = int((downloaded / total_size) * 100)
-                                    yield f"data: {progress}\n\n"
-                                else:
-                                    yield f"data: 50\n\n"
+                _, response = dbx.files_download(target_path)
+                downloaded = 0
+                with open(file_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1024 * 256):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size > 0:
+                                progress = int((downloaded / total_size) * 100)
+                                yield f"data: {progress}\n\n"
+                            else:
+                                yield f"data: 50\n\n"
                 
                 yield f"data: 100\n\n"
                 models[model_name] = YOLO(file_path)
                 model_colors[model_name] = random.choice(MODERN_COLORS)
                 yield f"data: DONE\n\n"
             else:
-                yield f"data: ERROR:Cloud Proxy URL not configured.\n\n"
+                yield f"data: ERROR:DROPBOX_ACCESS_TOKEN not configured.\n\n"
         except Exception as e:
             yield f"data: ERROR:{str(e)}\n\n"
 
