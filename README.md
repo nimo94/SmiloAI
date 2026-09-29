@@ -1,5 +1,9 @@
 # SmiloAI Engine v6.0 — Offline-First, Dual-Modality Dental AI Diagnostic Workstation
 
+<p align="center">
+  <img src="Sourcecodes/logo.png" width="150" alt="SmiloAI Logo">
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com)
@@ -13,7 +17,19 @@
 
 **SmiloAI Engine v6.0** introduces a massive leap forward in both security, user experience, and clinical reporting compared to v5.0. It transforms the engine from a local browser app into a polished, standalone Desktop Application while overhauling the diagnostic PDF reporting system for enterprise clinical use.
 
-### 🔥 Major v6.0 Updates:
+### 📊 v5.0 vs v6.0 Comparison
+
+| Feature | SmiloAI v5.0 | SmiloAI v6.0 |
+| :--- | :--- | :--- |
+| **User Interface** | Standard Web Browser UI | **Native Standalone Desktop App** with Taskbar Integration |
+| **Design Language** | Basic HTML/CSS layouts | **Premium Glassmorphism** with dynamic UI accents & typography |
+| **Camera Sync** | None (Manual Uploads only) | **Live QR Mobile Sync** for instant smartphone photo capture |
+| **Pipeline Visuals** | Static execution nodes | **"Liquid Glass" Animations** with live diagnostic node mapping |
+| **Security Architecture**| Vulnerable to path traversal | **Fully Patched & Hardened** endpoints with HTTP timeouts |
+| **Anatomical Mapping** | Basic Bounding Boxes | **Dental Position Matrix** (e.g., *Maxillary Right Central Incisor*) |
+| **Clinical Export** | Basic HTML popups | **Formal PDF Reports** (Universal Numbering, Smart Pagination) |
+
+### 🔥 Detailed v6.0 Upgrades:
 - **Core Security Patches**: Complete patching of arbitrary file read/write vulnerabilities (path traversals) and unauthenticated destructive endpoints.
 - **Multi-Device Camera Sync**: Advanced mobile QR code syncing allowing users to capture clinical photos directly from their smartphone and sync them flawlessly to the desktop application, complete with connection diagnostics.
 - **Standalone App Transformation**: The web UI now launches as a Native Standalone Desktop App (using Chromium App Mode) featuring proper OS taskbar integration and graceful backend shutdown when closed.
