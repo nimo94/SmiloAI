@@ -121,11 +121,12 @@ SmiloAI integrates an optional **AI Clinical Assistant** powered by a high-speed
 
 ## 🚀 Installation & Setup Guide
 
-### 📋 System Requirements
-- **Operating System**: Windows 10/11 (64-bit), Linux, or macOS.
-- **Processor**: Intel Core i5 6th Gen / AMD Ryzen 3 or newer (**AVX2 instruction support required**).
-- **RAM**: 8 GB minimum (16 GB recommended).
-- **Python**: Python 3.10 or newer.
+### 📋 System Requirements (Tested & Verified)
+- **Operating System**: Linux (Ubuntu 20.04+), Windows 10/11 (64-bit), or macOS 12+.
+- **Processor**: Intel Core i5 8th Gen (e.g., i5-8365U 1.60GHz) / AMD Ryzen 3 or newer (**AVX2 instruction support required** for hardware-accelerated CPU ONNX Runtime).
+- **RAM**: 8 GB minimum (Diagnostic Mode), **16 GB highly recommended** (Required for Auto Pilot Studio Training).
+- **Storage**: Minimum 2 GB of free disk space for AI models and dependencies.
+- **Python**: Python 3.10 to 3.13.
 
 ### ⚡ Quick Start (Developer Setup)
 
@@ -144,7 +145,7 @@ SmiloAI integrates an optional **AI Clinical Assistant** powered by a high-speed
 3. **Install Required Dependencies**:
    ```bash
    pip install --upgrade pip
-   pip install fastapi uvicorn opencv-python ultralytics torch torchvision pillow numpy groq requests customtkinter matplotlib pandas
+   pip install fastapi uvicorn opencv-python ultralytics torch torchvision pillow numpy groq requests python-multipart onnx onnxruntime onnxslim qrcode
    ```
 
 4. **Launch SmiloAI Workstation**:
@@ -158,7 +159,7 @@ SmiloAI integrates an optional **AI Clinical Assistant** powered by a high-speed
 
 ## 🔒 Security & Privacy Notice
 
-SmiloAI v6.0 is designed from the ground up as an **offline-first medical workstation**:
+SmiloAI v6.1 is designed from the ground up as an **offline-first medical workstation**:
 - **Zero Data Exfiltration**: Patient photographs and X-ray scans are processed entirely locally in your machine's system memory. No patient image data is transmitted to the internet.
 - **Optional Cloud Features**: External network communication only occurs if explicitly configured (e.g., transmitting anonymized text summaries for LLM reports).
 
@@ -175,4 +176,4 @@ SmiloAI is engineered as an advanced AI-assisted supplementary screening tool fo
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 **Copyright (c) 2025–2026 Aswindra Selvam**  
-*SmiloAI v6.0 — Final Year Project Technical Submission*
+*SmiloAI v6.1 — Final Year Project Technical Submission*
