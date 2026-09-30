@@ -143,16 +143,15 @@ graph TD
     end
 
     %% 2. Auto Pilot
-    subgraph Router["Phase 2: Auto Pilot Routing"]
-        C --> D{🧠 Auto Pilot Smart Router <br> ONNX Classification Model}:::highlight
-        D -->|Identifies RGB Intraoral| E[Intraoral Diagnostic Pipeline]
-        D -->|Identifies X-Ray Scan| F[Radiographic Diagnostic Pipeline]
+    subgraph Router["Phase 2: Auto Pilot Dynamic Routing"]
+        C --> D{🧠 Auto Pilot Smart Router <br> Custom ONNX Classifier}:::highlight
+        D -->|Inference Predicts Class| E["Resolves Label <br> (e.g. 'CALCULUSMD_R')"]
+        E -->|Look up Custom Graph| F["Injects Image into mapped <br> User-Defined Execution Flow"]
     end
 
     %% 3. Spatial Anchor
     subgraph Anchor["Phase 3: Spatial Anatomical Anchoring"]
-        E --> G(DENTALPOSITION YOLOv8)
-        F --> G
+        F --> G(DENTALPOSITION YOLOv8)
         G --> H["FDI / Universal Numbering Mapping <br> (e.g. Maxillary Central Incisor)"]:::AI
     end
 
@@ -182,8 +181,8 @@ graph TD
 - **Instant Transfer**: The smartphone camera instantly streams high-resolution intraoral photos across the local network directly into the desktop's active memory without ever touching the internet.
 
 ### 2. Auto Pilot Smart Routing (Classification Phase)
-- **Modality Detection**: Once an image is received, it is immediately fed into the **Auto Pilot ONNX Model** (custom-trained by the user via the built-in Auto Pilot Studio).
-- **Intelligent Dispatch**: The Auto Pilot visually analyzes the scan, determines its modality (e.g., RGB Intraoral vs. X-Ray), and dynamically routes the image to the appropriate array of **Medical Diagnostic (MD) Specialists**.
+- **Label Prediction**: Once an image is received, it is immediately fed into the **Auto Pilot ONNX Model** (custom-trained by the user via the built-in Auto Pilot Studio). The model classifies the image and outputs a specific predicted label (e.g., `CALCULUSMD_R`).
+- **Intelligent Dispatch**: The engine takes this predicted label, looks up the corresponding custom graph flow built by the user in the Flow Graph Editor, and dynamically injects the image directly into that specific execution pipeline.
 
 ### 3. Anatomical Mapping & Dental Position (Spatial Phase)
 - **Spatial Anchoring**: Before checking for diseases, the image is passed to the **DENTALPOSITION** YOLOv8 model.
