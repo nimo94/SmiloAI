@@ -1,4 +1,4 @@
-# SmiloAI Engine v6.0 — Offline-First, Dual-Modality Dental AI Diagnostic Workstation
+# SmiloAI Engine v6.1 — Offline-First, Dual-Modality Dental AI Diagnostic Workstation
 
 <p align="center">
   <img src="Sourcecodes/logo.png" width="150" alt="SmiloAI Logo">
@@ -14,9 +14,9 @@
 
 ---
 
-## 🌟 Overview (What's New in v6.0)
+## 🌟 Overview (What's New in v6.1)
 
-**SmiloAI Engine v6.0** introduces a massive leap forward in both security, user experience, and clinical reporting compared to v5.0. It transforms the engine from a local browser app into a polished, standalone Desktop Application while overhauling the diagnostic PDF reporting system for enterprise clinical use.
+**SmiloAI Engine v6.1** introduces the integrated **Auto Pilot Studio**, allowing practitioners to train their own custom AI routing models directly within the unified liquid-glass interface. It builds upon v6.0's massive leap forward in security, user experience, and clinical reporting, transforming the engine into a polished, standalone Desktop Application.
 
 ### 📊 v5.0 vs v6.0 Comparison
 

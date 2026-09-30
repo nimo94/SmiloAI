@@ -183,6 +183,7 @@
             filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
         }
     </style>
+<script src="chart.js"></script>
 </head>
 <body class="p-8">
 
@@ -441,9 +442,9 @@
                         </label>
                     </div>
 
-                    <button id="btnOpenTrainer" onclick="showTrainerWarning()" class="w-full mt-2 py-3 rounded-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 transition shadow-[0_0_20px_rgba(168,85,247,0.4)] text-sm flex items-center justify-center gap-2 border border-purple-400/50">
+                    <button id="btnOpenTrainer" onclick="openAutoPilotStudio()" class="w-full mt-2 py-3 rounded-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 transition shadow-[0_0_20px_rgba(168,85,247,0.4)] text-sm flex items-center justify-center gap-2 border border-purple-400/50">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-                        OPEN TRAINING APP
+                        OPEN AUTOPILOT STUDIO
                     </button>
                 </div>
 
@@ -1363,6 +1364,11 @@
 
         async function checkEngineState(isInitialBoot = false) {
             try {
+                if (isInitialBoot) {
+                    try {
+                        await fetch(`${API_URL}/api/reload_local_models`, { method: "POST" });
+                    } catch(e) {}
+                }
                 const res = await fetch(`${API_URL}/engine_state`);
                 if (!res.ok) throw new Error("Backend not fully ready");
                 const data = await res.json();
@@ -4115,7 +4121,7 @@
             const checkboxes = document.querySelectorAll('.batch-train-cb:checked');
             if (checkboxes.length === 0) return alert("Please select at least one image to use for training.");
 
-            let flowLabel = getActiveFlowLabel();
+            let flowLabel = await requireFlowLabelAsync();
             if (!flowLabel) return;
 
             // UI Lockout
@@ -4587,5 +4593,442 @@
             
         </div>
     </div>
+
+    <!-- Auto Pilot Studio Modal -->
+    <div id="autoPilotStudioModal" class="fixed inset-0 z-[200] hidden items-center justify-center bg-[#050b14]/70 backdrop-blur-[20px] transition-all duration-300 opacity-0 overflow-hidden">
+        
+        <!-- Ambient Glowing Orbs -->
+        <div class="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-fuchsia-600/30 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-cyan-600/20 rounded-full blur-[120px] animate-pulse pointer-events-none" style="animation-delay: 2s;"></div>
+
+        <div id="autoPilotStudioBox" class="bg-white/5 backdrop-blur-[40px] border border-white/20 p-8 rounded-[2.5rem] shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(255,255,255,0.3)] max-w-6xl w-full mx-4 scale-95 transition-all duration-300 relative flex flex-col md:flex-row gap-8 max-h-[90vh] overflow-y-auto ring-1 ring-white/10">
+            
+            <button onclick="closeAutoPilotStudio()" class="absolute top-4 right-4 z-50 text-white/50 hover:text-white bg-black/40 hover:bg-black/60 backdrop-blur-md p-3 rounded-full transition-all duration-300 border border-white/20 shadow-lg cursor-pointer">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <!-- Left Panel: Config -->
+            <div class="flex-1 flex flex-col gap-6 z-10">
+                <div>
+                    <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-purple-300 to-fuchsia-400 drop-shadow-sm tracking-tight">Auto Pilot Studio</h2>
+                    <p class="text-white/60 text-sm mt-2 font-medium">Train custom Smart Routing AI models directly in the browser.</p>
+                </div>
+
+                <div class="bg-black/20 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 shadow-inner">
+                    <h3 class="text-xs font-black text-white/40 mb-5 uppercase tracking-[0.2em]">Hyperparameters</h3>
+                    
+                    <div class="mb-6">
+                        <div class="flex justify-between mb-2">
+                            <label class="text-xs font-bold text-white/70">Epochs (10-200)</label>
+                            <span id="epochVal" class="text-xs font-bold text-cyan-300 bg-cyan-900/40 px-2 py-0.5 rounded border border-cyan-500/30">50</span>
+                        </div>
+                        <input type="range" id="epochSlider" min="10" max="200" value="50" class="w-full h-1.5 bg-black/50 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50" oninput="document.getElementById('epochVal').innerText = this.value">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-xs font-bold text-white/70">Patience (10-50)</label>
+                            <span id="patienceVal" class="text-xs font-bold text-rose-300 bg-rose-900/40 px-2 py-0.5 rounded border border-rose-500/30">15</span>
+                        </div>
+                        <input type="range" id="patienceSlider" min="10" max="50" value="15" class="w-full h-1.5 bg-black/50 rounded-lg appearance-none cursor-pointer accent-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-500/50" oninput="document.getElementById('patienceVal').innerText = this.value">
+                    </div>
+                </div>
+
+                <div class="bg-black/20 backdrop-blur-md p-6 rounded-[2rem] border border-white/10 shadow-inner flex-1 flex flex-col">
+                    <h3 class="text-xs font-black text-white/40 mb-4 uppercase tracking-[0.2em]">Target Specialists</h3>
+                    <div id="classListing" class="flex-1 overflow-y-auto max-h-48 space-y-2 pr-2 custom-scrollbar-purple">
+                        <!-- Classes will be injected here -->
+                    </div>
+                </div>
+
+                <button id="btnStartTraining" onclick="startAutoPilotTraining()" class="w-full py-4 rounded-[1.5rem] font-bold text-white bg-gradient-to-r from-cyan-500 via-purple-500 to-fuchsia-500 hover:from-cyan-400 hover:via-purple-400 hover:to-fuchsia-400 transition-all duration-500 shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:shadow-[0_0_50px_rgba(168,85,247,0.8)] text-lg border border-white/20 transform hover:-translate-y-1">
+                    INITIATE TRAINING
+                </button>
+                <button id="btnStopTraining" onclick="stopAutoPilotTraining()" class="hidden w-full py-4 rounded-[1.5rem] font-bold text-white bg-red-600/80 hover:bg-red-500/90 backdrop-blur-md transition-all duration-500 shadow-[0_0_30px_rgba(220,38,38,0.5)] border border-red-400/50 text-lg">
+                    SAFE HALT
+                </button>
+            </div>
+
+            <!-- Right Panel: Live Feed -->
+            <div class="flex-[1.8] flex flex-col gap-5 min-w-0 z-10">
+                <div class="bg-black/30 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex-1 min-h-[250px] flex flex-col relative shadow-inner">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                        <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <h3 class="text-[10px] font-bold text-white/30 font-mono ml-2 uppercase tracking-widest">Neural Terminal</h3>
+                    </div>
+                    <div id="trainerTerminal" class="flex-1 font-mono text-[13px] leading-relaxed text-emerald-400/90 overflow-y-auto whitespace-pre-wrap custom-scrollbar-purple">System Ready. Awaiting initiation sequence...</div>
+                </div>
+
+                <div class="bg-black/30 backdrop-blur-xl border border-white/10 rounded-[2rem] p-5 flex-[1.5] min-h-[300px] shadow-inner relative flex flex-col">
+                    <div class="flex justify-between items-center mb-2 z-20">
+                        <span class="text-[10px] font-bold text-white/30 uppercase tracking-widest">Real-Time Validation</span>
+                        <div class="flex items-baseline gap-1">
+                            <span id="liveAccuracyDisplay" class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-cyan-500 transition-all duration-300 transform origin-right">0.0%</span>
+                            <span class="text-[10px] font-bold text-cyan-500/50 uppercase tracking-widest">ACCURACY</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative w-full h-full min-h-[200px]">
+                        <canvas id="trainingChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 bg-black/20 backdrop-blur-md p-4 rounded-[1.5rem] border border-white/10 shadow-inner">
+                    <div class="flex-1 bg-black/60 rounded-full h-3 overflow-hidden border border-white/5 relative">
+                        <div id="trainingProgress" class="absolute top-0 left-0 bg-gradient-to-r from-cyan-400 via-purple-500 to-fuchsia-500 h-full w-0 transition-all duration-500 shadow-[0_0_10px_rgba(168,85,247,0.8)]"></div>
+                    </div>
+                    <span id="trainingPercentage" class="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-fuchsia-300 font-mono w-12 text-right">0%</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Auto Pilot Success Modal -->
+    <div id="trainingSuccessModal" class="fixed inset-0 z-[250] hidden items-center justify-center bg-[#050b14]/80 backdrop-blur-[20px] transition-all duration-300 opacity-0 overflow-hidden">
+        <!-- Glowing Ambient Lights for Success -->
+        <div class="absolute top-1/4 left-1/4 w-[40vw] h-[40vw] bg-emerald-500/20 rounded-full blur-[100px] animate-pulse pointer-events-none"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-[40vw] h-[40vw] bg-cyan-500/20 rounded-full blur-[100px] animate-pulse pointer-events-none" style="animation-delay: 1.5s;"></div>
+
+        <div id="trainingSuccessBox" class="bg-black/40 backdrop-blur-[50px] border border-white/20 p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(16,185,129,0.2),inset_0_1px_3px_rgba(255,255,255,0.3)] max-w-lg w-full mx-4 scale-95 transition-all duration-500 relative flex flex-col items-center text-center ring-1 ring-emerald-400/20">
+            
+            <div class="w-24 h-24 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.5)]">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            
+            <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300 mb-2">Training Complete</h2>
+            <p class="text-white/60 mb-8 font-medium">Neural synthesis successful. AI Specialist generated.</p>
+            
+            <div class="bg-black/30 w-full p-6 rounded-[2rem] border border-white/10 shadow-inner mb-8">
+                <p class="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-2">Final Validation Accuracy</p>
+                <div class="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 drop-shadow-lg" id="finalAccuracyDisplay">99%</div>
+            </div>
+
+            <div class="w-full bg-emerald-900/20 border border-emerald-500/20 rounded-2xl p-4 mb-8">
+                <p class="text-xs text-emerald-400/70 uppercase tracking-wider font-bold mb-1">Model Matrix Generated</p>
+                <p class="text-emerald-300 font-mono text-sm break-all" id="finalModelNameDisplay">AUTOPILOT_99_1234.onnx</p>
+            </div>
+            
+            <button onclick="closeTrainingSuccessModal()" class="w-full py-4 rounded-[1.5rem] font-bold text-slate-900 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 transition-all duration-300 shadow-[0_0_30px_rgba(16,185,129,0.4)] text-lg border border-emerald-300/30">
+                ACKNOWLEDGE & CLOSE
+            </button>
+        </div>
+    </div>
+    
+
+    <script>
+        let trainingChartInstance = null;
+        let eventSource = null;
+
+        async function openAutoPilotStudio() {
+            // Unload memory!
+            try {
+                await fetch(`${API_URL}/api/unload_models`, { method: "POST" });
+                console.log("Memory cleared.");
+            } catch(e) {}
+
+            try {
+                const res = await fetch(`${API_URL}/get_training_counts`);
+                const data = await res.json();
+                const container = document.getElementById('classListing');
+                container.innerHTML = '';
+                
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<p class="text-xs text-slate-500 italic">No dataset found. Save images from the Web UI first.</p>';
+                } else {
+                    for (const [cls, count] of Object.entries(data)) {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center gap-3 bg-slate-800 p-2 rounded-lg border border-slate-700';
+                        div.innerHTML = `
+                            <input type="checkbox" id="chk_${cls}" value="${cls}" checked class="w-4 h-4 rounded bg-slate-700 border-slate-600 text-purple-500 focus:ring-purple-500">
+                            <label for="chk_${cls}" class="text-sm text-slate-200 cursor-pointer flex-1 select-none">${cls}</label>
+                            <span class="text-xs font-mono ${count >= 50 ? 'text-emerald-400' : 'text-rose-400'}">${count} images</span>
+                        `;
+                        container.appendChild(div);
+                    }
+                }
+            } catch(e) {}
+
+            initChart();
+
+            const modal = document.getElementById('autoPilotStudioModal');
+            const box = document.getElementById('autoPilotStudioBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        async function closeAutoPilotStudio() {
+            const modal = document.getElementById('autoPilotStudioModal');
+            const box = document.getElementById('autoPilotStudioBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+            
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            try {
+                await fetch(`${API_URL}/api/reload_local_models`, { method: "POST" });
+                console.log("Memory reloaded.");
+                if (typeof checkEngineState === "function") checkEngineState();
+            } catch(e) {}
+        }
+
+        function showTrainingSuccessModal(accuracy, modelName) {
+            document.getElementById('finalAccuracyDisplay').innerText = `${Math.round(accuracy * 100)}%`;
+            document.getElementById('finalModelNameDisplay').innerText = modelName;
+            
+            const modal = document.getElementById('trainingSuccessModal');
+            const box = document.getElementById('trainingSuccessBox');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function closeTrainingSuccessModal() {
+            const modal = document.getElementById('trainingSuccessModal');
+            const box = document.getElementById('trainingSuccessBox');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('trainingChart').getContext('2d');
+            if (trainingChartInstance) {
+                trainingChartInstance.destroy();
+            }
+            
+            // Generate glowing fluid gradients
+            let gradientAcc = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientAcc.addColorStop(0, 'rgba(34, 211, 238, 0.4)');
+            gradientAcc.addColorStop(1, 'rgba(34, 211, 238, 0.0)');
+            
+            let gradientLoss = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientLoss.addColorStop(0, 'rgba(251, 113, 133, 0.4)');
+            gradientLoss.addColorStop(1, 'rgba(251, 113, 133, 0.0)');
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+            
+            trainingChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Accuracy',
+                            data: [],
+                            borderColor: '#22d3ee',
+                            backgroundColor: gradientAcc,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#020617',
+                            pointBorderColor: '#22d3ee',
+                            pointBorderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Loss',
+                            data: [],
+                            borderColor: '#fb7185',
+                            backgroundColor: gradientLoss,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#020617',
+                            pointBorderColor: '#fb7185',
+                            pointBorderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 6,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: { 
+                            labels: { color: '#e2e8f0', font: { size: 12, weight: '600' }, usePointStyle: true, boxWidth: 8 },
+                            position: 'top'
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                            backdropFilter: 'blur(10px)',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            usePointStyle: true,
+                            cornerRadius: 12
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#64748b', font: {size: 10} }, grid: { display: false } },
+                        y: { type: 'linear', display: true, position: 'left', ticks: { color: '#22d3ee', padding: 10, font: {size: 11} }, grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false } },
+                        y1: { type: 'linear', display: true, position: 'right', ticks: { color: '#fb7185', padding: 10, font: {size: 11} }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function logTerminal(msg) {
+            const term = document.getElementById('trainerTerminal');
+            term.innerHTML += `\n> ${msg}`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        async function startAutoPilotTraining() {
+            const checkedBoxes = document.querySelectorAll('#classListing input[type="checkbox"]:checked');
+            const selectedClasses = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedClasses.length < 2) {
+                alert("Please select at least 2 categories.");
+                return;
+            }
+
+            const epochs = document.getElementById('epochSlider').value;
+            const patience = document.getElementById('patienceSlider').value;
+
+            document.getElementById('btnStartTraining').classList.add('hidden');
+            document.getElementById('btnStopTraining').classList.remove('hidden');
+            
+            document.getElementById('trainerTerminal').innerHTML = "Initializing Deep Learning Engine...";
+            initChart();
+            document.getElementById('trainingProgress').style.width = '0%';
+            document.getElementById('trainingPercentage').innerText = '0%';
+
+            try {
+                const res = await fetch(`${API_URL}/api/train_autopilot`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ epochs, patience, classes: selectedClasses })
+                });
+                const data = await res.json();
+                if (data.status === 'error') {
+                    alert(data.message);
+                    resetTrainingButtons();
+                    return;
+                }
+                
+                listenToTrainingStream();
+            } catch(e) {
+                alert("Failed to connect to training engine.");
+                resetTrainingButtons();
+            }
+        }
+
+        async function stopAutoPilotTraining() {
+            try {
+                await fetch(`${API_URL}/api/stop_autopilot`, { method: "POST" });
+                document.getElementById('btnStopTraining').innerText = "HALTING...";
+                document.getElementById('btnStopTraining').disabled = true;
+            } catch(e) {}
+        }
+
+        function resetTrainingButtons() {
+            document.getElementById('btnStartTraining').classList.remove('hidden');
+            
+            const stopBtn = document.getElementById('btnStopTraining');
+            stopBtn.classList.add('hidden');
+            stopBtn.innerText = "SAFE STOP";
+            stopBtn.disabled = false;
+        }
+
+        function listenToTrainingStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            let bestAcc = 0;
+            let previousAcc = 0;
+            eventSource = new EventSource(`${API_URL}/api/train_stream`);
+            eventSource.onmessage = function(event) {
+                if (event.data === "keepalive") return;
+                try {
+                    const msg = JSON.parse(event.data);
+                    
+                    if (msg.type === "log") {
+                        logTerminal(msg.message);
+                    } else if (msg.type === "metric") {
+                        logTerminal(`Epoch ${msg.epoch}/${msg.target_epochs} -> Acc: ${msg.acc.toFixed(4)} | Loss: ${msg.loss.toFixed(4)}`);
+                        if (msg.acc > bestAcc) bestAcc = msg.acc;
+                        
+                        // ✨ Live Accuracy Animation
+                        const accDisplay = document.getElementById('liveAccuracyDisplay');
+                        const newAccPercentage = (msg.acc * 100).toFixed(1);
+                        accDisplay.innerText = `${newAccPercentage}%`;
+                        
+                        accDisplay.classList.remove('from-cyan-300', 'to-cyan-500', 'from-emerald-300', 'to-emerald-500', 'from-rose-300', 'to-rose-500', 'scale-110', 'scale-90');
+                        
+                        if (msg.acc > previousAcc) {
+                            accDisplay.classList.add('from-emerald-300', 'to-emerald-500', 'scale-110');
+                        } else if (msg.acc < previousAcc) {
+                            accDisplay.classList.add('from-rose-300', 'to-rose-500', 'scale-90');
+                        } else {
+                            accDisplay.classList.add('from-cyan-300', 'to-cyan-500');
+                        }
+                        
+                        setTimeout(() => {
+                            accDisplay.classList.remove('from-emerald-300', 'to-emerald-500', 'from-rose-300', 'to-rose-500', 'scale-110', 'scale-90');
+                            accDisplay.classList.add('from-cyan-300', 'to-cyan-500');
+                        }, 600);
+                        
+                        previousAcc = msg.acc;
+                        
+                        const p = (msg.epoch / msg.target_epochs) * 100;
+                        document.getElementById('trainingProgress').style.width = `${p}%`;
+                        document.getElementById('trainingPercentage').innerText = `${Math.round(p)}%`;
+                        
+                        trainingChartInstance.data.labels.push(`Ep ${msg.epoch}`);
+                        trainingChartInstance.data.datasets[0].data.push(msg.acc);
+                        trainingChartInstance.data.datasets[1].data.push(msg.loss);
+                        trainingChartInstance.update();
+                        
+                    } else if (msg.type === "done") {
+                        const statusStr = msg.stopped ? "HALTED SAFELY" : "COMPLETED";
+                        logTerminal(`✅ TRAINING ${statusStr}! Model saved as: ${msg.file}`);
+                        
+                        showTrainingSuccessModal(bestAcc, msg.file);
+                        
+                        resetTrainingButtons();
+                        eventSource.close();
+                        checkEngineState(); 
+                    } else if (msg.type === "error") {
+                        logTerminal(`❌ FATAL ERROR: ${msg.message}`);
+                        alert(`Training Error: ${msg.message}`);
+                        resetTrainingButtons();
+                        eventSource.close();
+                    }
+                } catch(e) {}
+            };
+            eventSource.onerror = function() {
+                eventSource.close();
+            };
+        }
+    </script>
+    
 </body>
 </html>

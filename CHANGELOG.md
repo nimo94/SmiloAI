@@ -2,6 +2,19 @@
 
 All notable changes to the SmiloAI project will be documented in this file.
 
+## [6.1.0] - 2026-10-01
+
+### Added
+- **Auto Pilot Studio Integration**: Wove the SmiloAI Auto Pilot functionality directly into the main interface using a sleek, premium "Extreme Liquid Glass" modal design, replacing separate scripts with a unified experience.
+- **Dynamic VRAM Management**: Auto Pilot Studio now automatically unloads all inference models from memory when opened, ensuring maximum VRAM/RAM is available for custom AI model training, and seamlessly reloads the system models upon exit without requiring a hard server restart.
+- **Real-Time Accuracy HUD**: Added a massive, beautifully animated real-time accuracy display that dynamically swells and flashes emerald or rose depending on epoch-to-epoch performance during training.
+- **Glassmorphic Success Feedback**: Completely removed standard browser alerts in favor of an elegant, ambient-glowing completion modal that presents final training metrics and the exported `.onnx` matrix to the user upon success.
+
+### Fixed
+- **YOLO Inference Engine Crashes**: Deep-patched the Ultralytics instantiation to explicitly enforce `task='classify'` during ONNX model loading and exporting, permanently preventing `IndexError: amax()` NMS crashes when analyzing Auto Pilot routing models.
+- **Async State Race Conditions**: Fixed the `getActiveFlowLabel` ReferenceError by replacing it with a custom `requireFlowLabelAsync` function that elegantly handles the new glass modal UI asynchronous flow.
+- **Model Registration Typo**: Corrected a silent frontend bug where the training process called a non-existent `fetchModels()` function instead of `checkEngineState()`, ensuring newly trained Auto Pilot models instantly appear in the Smart Routing registry.
+
 ## [6.0.0] - 2026-09-30
 
 ### Added

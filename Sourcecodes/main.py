@@ -49,6 +49,12 @@ from contextlib import asynccontextmanager
 from PIL import Image, ImageDraw, ImageFont
 import qrcode
 import socket
+import queue
+import threading
+import shutil
+import random
+import time
+import json
 import io
 from fastapi.responses import HTMLResponse
 import secrets
@@ -235,7 +241,8 @@ async def lifespan(app: FastAPI):
                     pass
 
             try:
-                models[file] = YOLO(file_path)
+                task_type = 'classify' if 'AUTOPILOT_' in file else 'detect'
+                models[file] = YOLO(file_path, task=task_type)
                 model_colors[file] = random.choice(MODERN_COLORS)
                 print(f"Successfully loaded {file}")
             except Exception as e:
@@ -271,7 +278,7 @@ app.add_middleware(
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     # Public assets that don't need authentication
-    if request.url.path in ["/logo.png", "/favicon.ico", "/manifest.json"]:
+    if request.url.path in ["/logo.png", "/favicon.ico", "/manifest.json", "/chart.js"]:
         return await call_next(request)
         
     token = request.query_params.get("token")
@@ -341,6 +348,13 @@ async def serve_logo():
     if os.path.exists(logo_path):
         return FileResponse(logo_path)
     return JSONResponse({"status": "error", "message": "Logo file not found in executable."})
+
+@app.get("/chart.js")
+async def serve_chart():
+    chart_path = get_resource_path("chart.js")
+    if os.path.exists(chart_path):
+        return FileResponse(chart_path, media_type="application/javascript")
+    return JSONResponse({"status": "error", "message": "chart.js not found in executable."})
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -444,6 +458,44 @@ def draw_modern_box_only(master, glow, x1, y1, x2, y2, color):
 
 
 # API endpoint handlers
+
+@app.post("/api/unload_models")
+async def unload_models(_auth: None = Depends(verify_authorized_request)):
+    global models, model_colors
+    models.clear()
+    model_colors.clear()
+    import gc
+    gc.collect()
+    import torch
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    return {"status": "success", "message": "All models unloaded from memory."}
+
+@app.post("/api/reload_local_models")
+async def reload_local_models(_auth: None = Depends(verify_authorized_request)):
+    global models, model_colors, autopilot_classes
+    import gc
+    import torch
+    loaded = 0
+    for search_dir in [LOCAL_MODELS_DIR, AUTOPILOT_OUT_DIR]:
+        if not os.path.exists(search_dir):
+            continue
+        local_files = [f for f in os.listdir(search_dir) if f.endswith(('.pt', '.onnx'))]
+        for file in local_files:
+            if file not in models:
+                try:
+                    file_path = os.path.join(search_dir, file)
+                    task_type = 'classify' if 'AUTOPILOT_' in file else 'detect'
+                    models[file] = YOLO(file_path, task=task_type)
+                    model_colors[file] = random.choice(MODERN_COLORS)
+                    loaded += 1
+                except Exception as e:
+                    print(f"Failed to load {file}: {e}")
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    return {"status": "success", "message": f"Reloaded {loaded} models into memory."}
+
 @app.get("/engine_state")
 async def get_engine_state():
     missing_models = []
@@ -510,109 +562,184 @@ async def get_engine_state():
     }
 
 
-trainer_process = None
 
+trainer_queue = queue.Queue()
+trainer_stop_requested = False
 
-@app.post("/launch_trainer")
-async def launch_trainer(_auth: None = Depends(verify_authorized_request)):
-    global trainer_process
-
-    # ✨ NEW: Forensic Debugger! Writes to console AND a text file!
-    def dlog(msg):
-        print(f"[DEBUG TRAINER LAUNCH] {msg}")
-        try:
-            with open("debug_launch_log.txt", "a", encoding="utf-8") as f:
-                f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {msg}\n")
-        except Exception:
-            pass
-
-    dlog("=== Launch Trainer Request Received ===")
-
+@app.post("/api/train_autopilot")
+async def train_autopilot(request: Request, _auth: None = Depends(verify_authorized_request)):
+    global trainer_stop_requested
     try:
-        if trainer_process is not None:
-            dlog(f"Existing trainer_process found. Poll status: {trainer_process.poll()}")
-            if trainer_process.poll() is None:
-                dlog("Trainer is already running.")
-                return {"status": "error", "message": "Training application is already running."}
-
-        current_dir = os.path.abspath(".")
-        dlog(f"Current Working Directory: {current_dir}")
-
-        exe_in_autopilot = os.path.join(current_dir, "AUTOPILOT", "auto_pilot_trainer.exe")
-        py_in_autopilot = os.path.join(current_dir, "AUTOPILOT", "auto_pilot_trainer.py")
-        exe_in_root = os.path.join(current_dir, "auto_pilot_trainer.exe")
-        py_in_root = os.path.join(current_dir, "auto_pilot_trainer.py")
-
-        dlog(f"Checking path 1: {exe_in_autopilot} -> Exists? {os.path.exists(exe_in_autopilot)}")
-        dlog(f"Checking path 2: {py_in_autopilot} -> Exists? {os.path.exists(py_in_autopilot)}")
-        dlog(f"Checking path 3: {exe_in_root} -> Exists? {os.path.exists(exe_in_root)}")
-        dlog(f"Checking path 4: {py_in_root} -> Exists? {os.path.exists(py_in_root)}")
-
-        cmd_to_run = None
-        cwd_to_use = current_dir
-
-        # ✨ THE CWD FIX: If it's in the AUTOPILOT folder, tell the process its CWD is AUTOPILOT!
-        if os.path.exists(exe_in_autopilot):
-            cmd_to_run = [exe_in_autopilot]
-            cwd_to_use = os.path.dirname(exe_in_autopilot)
-        elif os.path.exists(py_in_autopilot):
-            cmd_to_run = [os.path.abspath(sys.executable), py_in_autopilot]
-            cwd_to_use = os.path.dirname(py_in_autopilot)
-        elif os.path.exists(exe_in_root):
-            cmd_to_run = [exe_in_root]
-        elif os.path.exists(py_in_root):
-            cmd_to_run = [os.path.abspath(sys.executable), py_in_root]
-        else:
-            dlog("No valid executable/script found to launch.")
-            return {"status": "error", "message": "Training application not found."}
-
-        dlog(f"Executing CMD: {cmd_to_run}")
-        dlog(f"Using CWD: {cwd_to_use}")
-
-        # ✨ THE ULTIMATE FIX: Ask Windows Explorer to launch it, breaking all parent/child bonds!
-        if os.name == 'nt' and cmd_to_run[0].endswith('.exe'):
-            dlog("Using Windows Shell (os.startfile) to completely decouple the .exe process.")
-
-            old_cwd = os.getcwd()
-            try:
-                # Temporarily jump into the folder so the .exe feels at home, then launch it
-                os.chdir(cwd_to_use)
-                os.startfile(cmd_to_run[0])
-            finally:
-                # Jump back immediately so we don't break FastAPI
-                os.chdir(old_cwd)
-
-            dlog("Shell execute triggered successfully.")
-            return {"status": "success"}
-        else:
-            # Fallback for Mac/Linux or raw .py scripts
-            kwargs = {"close_fds": True, "start_new_session": True}
-            if os.name == 'nt':
-                # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB
-                kwargs['creationflags'] = 0x00000008 | 0x00000200 | 0x01000000
-
-            trainer_process = subprocess.Popen(cmd_to_run, cwd=cwd_to_use, **kwargs)
-            dlog(f"Subprocess spawned successfully with PID: {trainer_process.pid}")
-            return {"status": "success"}
-
+        data = await request.json()
+        epochs = int(data.get("epochs", 50))
+        patience = int(data.get("patience", 15))
+        selected_classes = data.get("classes", [])
+        
+        if len(selected_classes) < 2:
+            return JSONResponse(status_code=400, content={"status": "error", "message": "At least 2 classes required."})
+            
+        base_dir = os.path.join("AUTOPILOT", "Training_Data")
+        balanced_dir = os.path.join("AUTOPILOT", "Training_Data_Balanced")
+        
+        counts = {}
+        for cat in selected_classes:
+            counts[cat] = len(os.listdir(os.path.join(base_dir, cat)))
+        min_count = min(counts.values())
+        
+        if min_count < 50:
+            return JSONResponse(status_code=400, content={"status": "error", "message": f"Not enough data. Min count is {min_count}, required 50."})
+            
+        if os.path.exists(balanced_dir):
+            shutil.rmtree(balanced_dir)
+        os.makedirs(balanced_dir)
+        
+        for cat in selected_classes:
+            cat_target = os.path.join(balanced_dir, cat)
+            os.makedirs(cat_target)
+            all_files = os.listdir(os.path.join(base_dir, cat))
+            selected_files = random.sample(all_files, min_count)
+            for f in selected_files:
+                shutil.copy2(os.path.join(base_dir, cat, f), os.path.join(cat_target, f))
+                
+        trainer_stop_requested = False
+        while not trainer_queue.empty():
+            trainer_queue.get()
+            
+        threading.Thread(target=train_worker_thread, args=(epochs, patience, balanced_dir), daemon=True).start()
+        return {"status": "success", "message": "Training started."}
     except Exception as e:
-        dlog(f"EXCEPTION CAUGHT: {str(e)}")
-        dlog(traceback.format_exc())
         return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
 
+@app.post("/api/stop_autopilot")
+async def stop_autopilot(_auth: None = Depends(verify_authorized_request)):
+    global trainer_stop_requested
+    trainer_stop_requested = True
+    return {"status": "success", "message": "Stop requested."}
 
-@app.get("/trainer_status")
-async def trainer_status():
-    global trainer_process
-    is_running = False
-    if trainer_process is not None:
-        if trainer_process.poll() is None:
-            is_running = True
+def train_worker_thread(epochs, patience, data_dir):
+    try:
+        from ultralytics import YOLO
+        import ultralytics
+        ultralytics.utils.ONLINE = False
+        
+        trainer_queue.put({"type": "log", "message": "Loading YOLOv8 nano classification model..."})
+        model = YOLO('yolov8n-cls.pt')
+        
+        current_best_acc = 0.0
+        
+        def on_fit_epoch_end(trainer):
+            nonlocal current_best_acc
+            if trainer_stop_requested:
+                trainer.stop = True
+                
+            epoch = trainer.epoch + 1
+            metrics = trainer.metrics
+            raw_acc = metrics.get('metrics/accuracy_top1', 0.0)
+            try:
+                acc_val = float(raw_acc.item()) if hasattr(raw_acc, 'item') else float(raw_acc)
+            except:
+                acc_val = 0.0
+                
+            loss_val = 0.0
+            if trainer.tloss is not None:
+                try:
+                    if hasattr(trainer.tloss, 'shape') and len(trainer.tloss.shape) == 0:
+                        loss_val = float(trainer.tloss.item())
+                    elif hasattr(trainer.tloss, '__getitem__'):
+                        extracted_item = trainer.tloss[0]
+                        loss_val = float(extracted_item.item()) if hasattr(extracted_item, 'item') else float(extracted_item)
+                    else:
+                        loss_val = float(trainer.tloss)
+                except:
+                    loss_val = 0.0
+                    
+            if acc_val > current_best_acc:
+                current_best_acc = acc_val
+                
+            trainer_queue.put({
+                "type": "metric",
+                "epoch": epoch,
+                "target_epochs": epochs,
+                "acc": acc_val,
+                "loss": loss_val
+            })
+            
+        model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
+        
+        trainer_queue.put({"type": "log", "message": f"Initiating {epochs}-Epoch Deep Learning Sequence..."})
+        project_dir = os.path.abspath("SmiloAI_AutoPilot")
+        
+        model.train(
+            data=os.path.abspath(data_dir),
+            epochs=epochs,
+            patience=patience,
+            imgsz=224,
+            batch=16,
+            project=project_dir,
+            name="latest_router",
+            exist_ok=True,
+            verbose=False,
+            plots=False
+        )
+        
+        best_pt_path = None
+        try:
+            if hasattr(model, 'trainer') and hasattr(model.trainer, 'best'):
+                best_pt_path = str(model.trainer.best)
+        except:
+            pass
+            
+        if not best_pt_path or not os.path.exists(best_pt_path):
+            search_dirs = [os.path.abspath("runs"), os.path.abspath("SmiloAI_AutoPilot")]
+            newest_pt = None
+            newest_time = 0
+            for sdir in search_dirs:
+                if os.path.exists(sdir):
+                    for root, _, files in os.walk(sdir):
+                        if "best.pt" in files:
+                            full_p = os.path.join(root, "best.pt")
+                            mtime = os.path.getmtime(full_p)
+                            if mtime > newest_time:
+                                newest_time = mtime
+                                newest_pt = full_p
+            best_pt_path = newest_pt
+            
+        if best_pt_path and os.path.exists(best_pt_path):
+            trainer_queue.put({"type": "log", "message": "Optimal weights located. Converting to ONNX..."})
+            best_model = YOLO(best_pt_path, task='classify')
+            exported_path = best_model.export(format="onnx", imgsz=224)
+            
+            if exported_path and os.path.exists(str(exported_path)):
+                os.makedirs(AUTOPILOT_OUT_DIR, exist_ok=True)
+                best_acc_int = round(current_best_acc * 100)
+                version_str = time.strftime("%Y%m%d_%H%M%S")
+                final_model_name = f"AUTOPILOT_{best_acc_int:02d}_{version_str}.onnx"
+                final_dest = os.path.join(AUTOPILOT_OUT_DIR, final_model_name)
+                shutil.move(str(exported_path), final_dest)
+                
+                trainer_queue.put({"type": "done", "file": final_model_name, "stopped": trainer_stop_requested})
+            else:
+                trainer_queue.put({"type": "error", "message": "Failed to export ONNX."})
         else:
-            trainer_process = None
+            trainer_queue.put({"type": "error", "message": "Failed to locate best.pt weights."})
+            
+    except Exception as e:
+        trainer_queue.put({"type": "error", "message": str(e)})
 
-    return {"is_running": is_running}
-
+@app.get("/api/train_stream")
+async def train_stream():
+    async def event_generator():
+        import asyncio
+        while True:
+            if not trainer_queue.empty():
+                msg = trainer_queue.get()
+                yield f"data: {json.dumps(msg)}\n\n"
+                if msg["type"] in ["done", "error"]:
+                    break
+            else:
+                await asyncio.sleep(0.5)
+                yield ": keepalive\n\n"
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/get_training_counts")
 async def get_training_counts():
@@ -678,7 +805,8 @@ async def download_cloud_model_stream(model_name: str):
                                 yield f"data: 50\n\n"
                 
                 yield f"data: 100\n\n"
-                models[model_name] = YOLO(file_path)
+                task_type = 'classify' if 'AUTOPILOT_' in model_name else 'detect'
+                models[model_name] = YOLO(file_path, task=task_type)
                 model_colors[model_name] = random.choice(MODERN_COLORS)
                 yield f"data: DONE\n\n"
             else:
@@ -734,7 +862,8 @@ async def load_model(file: UploadFile = File(...), _auth: None = Depends(verify_
             return JSONResponse({"status": "error", "message": "Model already loaded."})
         with open(file_path, "wb") as buffer:
             buffer.write(await file.read())
-        models[model_name] = YOLO(file_path)
+        task_type = 'classify' if 'AUTOPILOT_' in model_name else 'detect'
+        models[model_name] = YOLO(file_path, task=task_type)
         model_colors[model_name] = random.choice(MODERN_COLORS)
         return {"status": "success", "model_name": model_name}
     except Exception as e:
