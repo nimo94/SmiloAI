@@ -125,6 +125,57 @@ SmiloAI integrates an optional **AI Clinical Assistant** powered by a high-speed
 
 The SmiloAI ecosystem operates as a highly interconnected, offline-first pipeline. Below is the step-by-step diagnostic journey of a clinical image from capture to final PDF report:
 
+```mermaid
+graph TD
+    %% Styling
+    classDef default fill:#1e293b,stroke:#334155,stroke-width:2px,color:#f8fafc,border-radius:8px
+    classDef highlight fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff,font-weight:bold
+    classDef hardware fill:#4c1d95,stroke:#8b5cf6,stroke-width:2px,color:#ffffff
+    classDef AI fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    classDef outcome fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff
+
+    %% 1. Acquisition
+    subgraph Acq["Phase 1: Image Acquisition"]
+        A[📸 Desktop File Drag & Drop]:::hardware
+        B[📱 Mobile QR Connect]:::hardware
+        B --> |Local WebSockets / No Internet| C(Active RAM Buffer)
+        A --> C
+    end
+
+    %% 2. Auto Pilot
+    subgraph Router["Phase 2: Auto Pilot Routing"]
+        C --> D{🧠 Auto Pilot Smart Router <br> ONNX Classification Model}:::highlight
+        D -->|Identifies RGB Intraoral| E[Intraoral Diagnostic Pipeline]
+        D -->|Identifies X-Ray Scan| F[Radiographic Diagnostic Pipeline]
+    end
+
+    %% 3. Spatial Anchor
+    subgraph Anchor["Phase 3: Spatial Anatomical Anchoring"]
+        E --> G(DENTALPOSITION YOLOv8)
+        F --> G
+        G --> H["FDI / Universal Numbering Mapping <br> (e.g. Maxillary Central Incisor)"]:::AI
+    end
+
+    %% 4. Parallel Inference
+    subgraph Inference["Phase 4: Parallel Pathology Inference"]
+        H -.-> I1(CARIESMD)
+        H -.-> I2(CALCULUSMD)
+        H -.-> I3(GINGIVITISMD)
+        
+        I1 --> J["Intersection over Union (IoU) Filter <br> Eliminates duplicate bounding boxes"]
+        I2 --> J
+        I3 --> J
+    end
+
+    %% 5. Synthesis
+    subgraph Report["Phase 5: Synthesis & Reporting"]
+        J --> K["Geometrical Heuristic Engine <br> (Links Pathology coords to Tooth coords)"]
+        K --> L{"AI Clinical Assistant <br> (LLM Streaming)"}:::highlight
+        L --> M[Structured JSON Data]
+        M --> N[📄 Final PDF Clinical Report <br> with Bounding Box Visuals]:::outcome
+    end
+```
+
 ### 1. Image Acquisition & Mobile QR Sync
 - **Local Upload**: Users can drag and drop clinical intraoral photos or X-ray scans directly into the desktop application.
 - **Mobile QR Connect**: Alternatively, the engine hosts a localized web server on the clinic's secure Wi-Fi. The practitioner scans a dynamic **QR Code** on the desktop UI using their smartphone. 
