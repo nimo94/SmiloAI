@@ -63,3 +63,10 @@ Sourcecodes/model/*.onnx
 Sourcecodes/model/*.pt
 !Sourcecodes/model/CALCULUSMD_R_60.onnx
 !Sourcecodes/model/.gitkeep
+
+# Closed source files
+main_closed.py
+
+Sourcecodes/build.bat
+Sourcecodes/build.sh
+Sourcecodes/chart.js

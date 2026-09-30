@@ -18,31 +18,30 @@
 
 **SmiloAI Engine v6.1** introduces the integrated **Auto Pilot Studio**, allowing practitioners to train their own custom AI routing models directly within the unified liquid-glass interface. It builds upon v6.0's massive leap forward in security, user experience, and clinical reporting, transforming the engine into a polished, standalone Desktop Application.
 
-### 📊 v5.0 vs v6.0 Comparison
+### 📊 v6.0 vs v6.1 Comparison
 
-| Feature | SmiloAI v5.0 | SmiloAI v6.0 |
+| Feature | SmiloAI v6.0 | SmiloAI v6.1 |
 | :--- | :--- | :--- |
-| **User Interface** | Standard Web Browser UI | **Native Standalone Desktop App** with Taskbar Integration |
-| **Design Language** | Basic HTML/CSS layouts | **Premium Glassmorphism** with dynamic UI accents & typography |
-| **Camera Sync** | None (Manual Uploads only) | **Live QR Mobile Sync** for instant smartphone photo capture |
-| **Pipeline Visuals** | Static execution nodes | **"Liquid Glass" Animations** with live diagnostic node mapping |
-| **Security Architecture**| Vulnerable to path traversal | **Fully Patched & Hardened** endpoints with HTTP timeouts |
-| **Anatomical Mapping** | Basic Bounding Boxes | **Dental Position Matrix** (e.g., *Maxillary Right Central Incisor*) |
-| **Clinical Export** | Basic HTML popups | **Formal PDF Reports** (Universal Numbering, Smart Pagination) |
+| **Auto Pilot Trainer** | Disconnected standalone desktop script | **Integrated Liquid Glass Studio** inside the main UI |
+| **VRAM Management** | Diagnostic models permanently locked in memory | **Dynamic Model Unloading/Reloading** to maximize training RAM |
+| **Training Feedback** | Basic terminal console log | **Live Animated Accuracy HUD** with dynamic color scaling |
+| **Model Completion UI**| Standard browser popups | **Glassmorphic ambient-glowing** success modals |
+| **YOLO ONNX Export** | Prone to `amax()` NMS runtime crashes | **Hardened `classify` Task Override** for stable routing |
+| **System State Syncing**| Race conditions during rapid UI transitions | **Strict Async Handlers** (`requireFlowLabelAsync`) for seamless UX |
 
-### 🔥 Detailed v6.0 Upgrades:
-- **Core Security Patches**: Complete patching of arbitrary file read/write vulnerabilities (path traversals) and unauthenticated destructive endpoints.
-- **Multi-Device Camera Sync**: Advanced mobile QR code syncing allowing users to capture clinical photos directly from their smartphone and sync them flawlessly to the desktop application, complete with connection diagnostics.
-- **Standalone App Transformation**: The web UI now launches as a Native Standalone Desktop App (using Chromium App Mode) featuring proper OS taskbar integration and graceful backend shutdown when closed.
-- **UI/UX Glassmorphism**: A total UI redesign featuring premium glassmorphism, dynamic amber/emerald accents, sleek modern typography, and a "liquid glass" execution visualizer for the AI pipelines.
-- **Dental Position Anatomical Mapping**: Integration of the specialized `DENTALPOSITION` model with custom logic to map raw detections into precise anatomical labels (e.g., *Maxillary Right Central Incisor*) and group multi-tooth flaws logically in summaries.
-- **Comprehensive PDF Reporting**: A totally rebuilt PDF generation engine that produces highly formal clinical reports with FDI/Universal tooth numbering, intelligent 4-image-per-page formatting, and seamless background exporting.
+### 🔥 Detailed v6.1 Upgrades:
+- **Auto Pilot Studio Integration**: Wove the SmiloAI Auto Pilot functionality directly into the main interface using a sleek, premium "Extreme Liquid Glass" modal design, replacing separate scripts with a unified experience.
+- **Dynamic VRAM Management**: Auto Pilot Studio now automatically unloads all inference models from memory when opened, ensuring maximum VRAM/RAM is available for custom AI model training, and seamlessly reloads the system models upon exit without requiring a hard server restart.
+- **Real-Time Accuracy HUD**: Added a massive, beautifully animated real-time accuracy display that dynamically swells and flashes emerald or rose depending on epoch-to-epoch performance during training.
+- **Glassmorphic Success Feedback**: Completely removed standard browser alerts in favor of an elegant, ambient-glowing completion modal that presents final training metrics and the exported `.onnx` matrix to the user upon success.
+- **YOLO Inference Engine Crashes**: Deep-patched the Ultralytics instantiation to explicitly enforce `task='classify'` during ONNX model loading and exporting, permanently preventing `IndexError: amax()` NMS crashes when analyzing Auto Pilot routing models.
+- **Async State Race Conditions**: Fixed the `getActiveFlowLabel` ReferenceError by replacing it with a custom `requireFlowLabelAsync` function that elegantly handles the new glass modal UI asynchronous flow.
 
 ---
 
 ## 🧠 Core AI Specialist Models & Confidence Architecture
 
-SmiloAI v6.0 retains its automated, modular model management architecture. Models are loaded directly from the local filesystem (`/Sourcecodes/model/`) into memory via **ONNX Runtime** and **Ultralytics YOLOv8**, optimized for CPU inference with AVX2 instruction acceleration.
+SmiloAI v6.1 retains its automated, modular model management architecture. Models are loaded directly from the local filesystem (`/Sourcecodes/model/`) into memory via **ONNX Runtime** and **Ultralytics YOLOv8**, optimized for CPU inference with AVX2 instruction acceleration.
 
 ### 📦 Bundled & Supported Specialist Models
 
