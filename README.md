@@ -12,6 +12,8 @@
   <a href="https://ultralytics.com"><img src="https://img.shields.io/badge/Ultralytics-YOLOv8-blueviolet.svg" alt="Ultralytics YOLO"></a>
 </p>
 
+> **🚀 UPCOMING UPDATE:** Fully compiled, zero-dependency **Standalone Packages for Linux and Windows** (.exe / .AppImage) are currently in development for a 1-click install experience.
+
 ---
 
 ## 🌟 Overview (What's New in v6.1)
@@ -116,6 +118,36 @@ SmiloAI generates rich visual diagnostics:
 SmiloAI integrates an optional **AI Clinical Assistant** powered by a high-speed streaming LLM API:
 - **Server-Sent Events (SSE) Streaming**: Delivers token-by-token real-time narrative summaries via `/generate_ai_summary_stream`.
 - **Context-Aware Translation**: Translates technical bounding box coordinates into empathetic, patient-friendly clinical treatment explanations.
+
+---
+
+## 🔄 The SmiloAI Diagnostic Workflow (How It Works)
+
+The SmiloAI ecosystem operates as a highly interconnected, offline-first pipeline. Below is the step-by-step diagnostic journey of a clinical image from capture to final PDF report:
+
+### 1. Image Acquisition & Mobile QR Sync
+- **Local Upload**: Users can drag and drop clinical intraoral photos or X-ray scans directly into the desktop application.
+- **Mobile QR Connect**: Alternatively, the engine hosts a localized web server on the clinic's secure Wi-Fi. The practitioner scans a dynamic **QR Code** on the desktop UI using their smartphone. 
+- **Instant Transfer**: The smartphone camera instantly streams high-resolution intraoral photos across the local network directly into the desktop's active memory without ever touching the internet.
+
+### 2. Auto Pilot Smart Routing (Classification Phase)
+- **Modality Detection**: Once an image is received, it is immediately fed into the **Auto Pilot ONNX Model** (custom-trained by the user via the built-in Auto Pilot Studio).
+- **Intelligent Dispatch**: The Auto Pilot visually analyzes the scan, determines its modality (e.g., RGB Intraoral vs. X-Ray), and dynamically routes the image to the appropriate array of **Medical Diagnostic (MD) Specialists**.
+
+### 3. Anatomical Mapping & Dental Position (Spatial Phase)
+- **Spatial Anchoring**: Before checking for diseases, the image is passed to the **DENTALPOSITION** YOLOv8 model.
+- **Identifier Tagging**: This model scans the structure of the jaw/teeth and draws bounding boxes to identify specific anatomical zones (e.g., *Maxillary Right Central Incisor*, *Mandibular Left Molar*). 
+- **Universal Numbering**: These detected zones are cross-referenced with standard dental numbering systems to provide a spatial anchor for any pathologies found later.
+
+### 4. Specialist Inference (Diagnostic Phase)
+- **Parallel Analysis**: The routed image is processed through the active specialist models (e.g., `CARIESMD`, `CALCULUSMD`, `GINGIVITISMD`).
+- **Pathology Detection**: The CPU-accelerated ONNX Runtime generates localized bounding boxes (Luminance Halos) around detected anomalies (like a cavity or tartar buildup).
+- **Intersection over Union (IoU)**: An NMS filter automatically merges overlapping diagnostic boxes from different models to prevent visual clutter and duplicate reporting.
+
+### 5. Data Synthesis & PDF Reporting (Final Phase)
+- **Heuristic Grouping**: The system geometrically compares the pathology bounding boxes against the anatomical bounding boxes. If a "Caries" box overlaps a "Central Incisor" box, the system logically links them (e.g., "Caries detected on Central Incisor").
+- **LLM Summary**: The structured JSON data is optionally streamed to an AI Clinical Assistant, which translates the raw technical coordinates into an empathetic, patient-friendly clinical treatment summary.
+- **PDF Export**: The fully annotated images, anatomical groupings, numerical data, and LLM summary are fed into a customized HTML-to-PDF engine, rapidly generating a formal, paginated clinical record ready for the patient's file.
 
 ---
 
