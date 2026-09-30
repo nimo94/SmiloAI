@@ -127,51 +127,93 @@ The SmiloAI ecosystem operates as a highly interconnected, offline-first pipelin
 
 ```mermaid
 graph TD
-    %% Styling
-    classDef default fill:#1e293b,stroke:#334155,stroke-width:2px,color:#f8fafc,border-radius:8px
-    classDef highlight fill:#0284c7,stroke:#38bdf8,stroke-width:2px,color:#ffffff,font-weight:bold
-    classDef hardware fill:#4c1d95,stroke:#8b5cf6,stroke-width:2px,color:#ffffff
-    classDef AI fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
-    classDef outcome fill:#7f1d1d,stroke:#ef4444,stroke-width:2px,color:#ffffff
-
-    %% 1. Acquisition
-    subgraph Acq["Phase 1: Image Acquisition"]
-        A[📸 Desktop File Drag & Drop]:::hardware
-        B[📱 Mobile QR Connect]:::hardware
-        B --> |Local WebSockets / No Internet| C(Active RAM Buffer)
-        A --> C
+    %% Styling Configuration
+    classDef sys fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#f8fafc
+    classDef api fill:#1e3a8a,stroke:#60a5fa,stroke-width:2px,color:#ffffff,font-weight:bold
+    classDef memory fill:#4c1d95,stroke:#a855f7,stroke-width:2px,color:#ffffff
+    classDef cv2 fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#ffffff
+    classDef onnx fill:#831843,stroke:#f43f5e,stroke-width:2px,color:#ffffff,font-weight:bold
+    classDef logic fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff
+    classDef llm fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ffffff
+    classDef ui fill:#312e81,stroke:#818cf8,stroke-width:2px,color:#ffffff
+    
+    subgraph ClientLayer["1. Frontend & Devices (index.html / Mobile)"]
+        UI_DragDrop[Desktop UI Drag & Drop]:::ui
+        UI_Graph[UI Flow Graph Editor Canvas]:::ui
+        UI_Studio[Auto Pilot Studio Canvas]:::ui
+        Mob_Cam[Smartphone Camera /mobile_camera]:::ui
     end
 
-    %% 2. Auto Pilot
-    subgraph Router["Phase 2: Auto Pilot Dynamic Routing"]
-        C --> D{🧠 Auto Pilot Smart Router <br> Custom ONNX Classifier}:::highlight
-        D -->|Inference Predicts Class| E["Resolves Label <br> (e.g. 'CALCULUSMD_R')"]
-        E -->|Look up Custom Graph| F["Injects Image into mapped <br> User-Defined Execution Flow"]
+    subgraph ServerLayer["2. FastAPI Core Engine (main.py)"]
+        API_Train(("/api/train_stream")):::api
+        API_Mem(("/api/unload_models & /api/reload_local_models")):::api
+        API_Sync(("/mobile_sync WebSocket")):::api
+        API_Inf(("/run_inference")):::api
     end
-
-    %% 3. Spatial Anchor
-    subgraph Anchor["Phase 3: Spatial Anatomical Anchoring"]
-        F --> G(DENTALPOSITION YOLOv8)
-        G --> H["FDI / Universal Numbering Mapping <br> (e.g. Maxillary Central Incisor)"]:::AI
+    
+    %% Interactions
+    UI_Studio -->|Trigger Training| API_Mem
+    API_Mem -->|Frees VRAM| RAM[(System RAM / VRAM)]:::memory
+    UI_Studio -->|Async Metrics| API_Train
+    
+    Mob_Cam -->|Streams binary chunks| API_Sync
+    API_Sync -->|check_mobile_upload| UI_DragDrop
+    
+    UI_DragDrop -->|POST Image Bytes| API_Inf
+    UI_Graph -->|POST JSON Graph| API_Inf
+    
+    subgraph Preprocess["3. OpenCV Pre-Processing"]
+        API_Inf --> CV1[cv2.imdecode]:::cv2
+        CV1 --> CV2[cv2.resize to 640x640]:::cv2
+        CV2 --> CV3[Pad Canvas 640x1140]:::cv2
     end
-
-    %% 4. Parallel Inference
-    subgraph Inference["Phase 4: Parallel Pathology Inference"]
-        H -.-> I1(CARIESMD)
-        H -.-> I2(CALCULUSMD)
-        H -.-> I3(GINGIVITISMD)
+    
+    subgraph Router["4. Auto Pilot Smart Routing"]
+        CV3 --> AP1{Mode == 'custom' & AutoPilot Active?}:::logic
+        AP1 -->|Yes| AP2(Auto Pilot ONNX Classifier):::onnx
+        AP2 -->|YOLO class prediction| AP3[Matches string in all_presets JSON]:::logic
+        AP3 -->|Overrides execution graph| BFS
+        AP1 -->|No| BFS
+    end
+    
+    subgraph BFS_Engine["5. Breadth-First Search Node Engine"]
+        BFS{BFS Queue Execution}:::logic
+        BFS -->|Parse Nodes & Edges| Q[queue = list]:::memory
+        Q -->|Pop Node| N1{Node Type?}:::logic
+    end
+    
+    subgraph Spatial["6. Spatial Anchoring"]
+        N1 -->|'DENTALPOSITION' Node| DP1(ONNX CPUExecutionProvider):::onnx
+        DP1 --> DP2[YOLOv8 Output: Class 0,1,2,3]:::logic
+        DP2 --> DP3[Geometric Centers x_c, y_c mapped to FDI Grid]:::logic
+    end
+    
+    subgraph Specialist["7. Parallel Specialist Inference"]
+        N1 -->|'CALCULUSMD', 'CARIESMD', etc| SP1(ONNX CPUExecutionProvider):::onnx
+        SP1 --> SP2[Yields Bounding Boxes & Confidences]:::logic
+        SP2 --> IOU[IoU NMS Filter > 0.4]:::logic
+    end
+    
+    subgraph Synthesis["8. Heuristics & Rendering"]
+        DP3 --> HEUR
+        IOU --> HEUR
+        HEUR{Geometrical Heuristic Engine}:::logic
+        HEUR -->|Links Pathology box inside Anatomy box| JSON_RES[Structured Findings JSON]:::memory
         
-        I1 --> J["Intersection over Union (IoU) Filter <br> Eliminates duplicate bounding boxes"]
-        I2 --> J
-        I3 --> J
+        HEUR --> DRAW1[draw_modern_box_only]:::cv2
+        DRAW1 --> DRAW2[Apply Gaussian Blur Glow Layers]:::cv2
+        DRAW2 --> DRAW3[draw_hud_callouts]:::cv2
+        DRAW3 --> B64[Base64 Encoded HTML Render]:::memory
     end
-
-    %% 5. Synthesis
-    subgraph Report["Phase 5: Synthesis & Reporting"]
-        J --> K["Geometrical Heuristic Engine <br> (Links Pathology coords to Tooth coords)"]
-        K --> L{"AI Clinical Assistant <br> (LLM Streaming)"}:::highlight
-        L --> M[Structured JSON Data]
-        M --> N[📄 Final PDF Clinical Report <br> with Bounding Box Visuals]:::outcome
+    
+    subgraph Export["9. Export & LLM"]
+        JSON_RES --> LLM1(Groq API)
+        LLM1 -->|SSE Streaming| LLM2[AI Clinical Summary]:::llm
+        
+        B64 --> PDF1
+        JSON_RES --> PDF1
+        LLM2 --> PDF1
+        PDF1(HTML to PDF window.print Pipeline):::ui
     end
 ```
 
